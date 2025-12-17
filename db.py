@@ -3,7 +3,7 @@ import os
 from flask import g
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "restaurant.db")
+DB_PATH = os.getenv("DB_PATH", "/data/restaurant.db")
 
 # ---------------- DB CONNECTION ----------------
 def get_db():
