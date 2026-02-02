@@ -241,7 +241,7 @@ def customer(restaurant):
         return "Restaurant not found", 404
 
     menu = fetchall(
-        sql("SELECT * FROM menu WHERE restaurant_id=? AND available=1"),
+        sql("SELECT * FROM menu WHERE restaurant_id=? AND available=TRUE"),
         (r["id"],)
     )
 
@@ -569,7 +569,7 @@ def api_add_menu():
     execute(sql("""
         INSERT INTO menu
         (restaurant_id, name, price, category, image, available)
-        VALUES (?,?,?,?,?,1)
+        VALUES (?,?,?,?,?,TRUE)
     """), (
         session["restaurant_id"],
         request.form["name"],
@@ -586,7 +586,7 @@ def api_add_menu():
 def toggle_menu(item_id):
     execute(sql("""
         UPDATE menu
-        SET available = CASE available WHEN 1 THEN 0 ELSE 1 END
+        SET available = NOT available
         WHERE id=? AND restaurant_id=?
     """), (item_id, session["restaurant_id"]))
     commit()
@@ -617,7 +617,7 @@ def import_menu_template():
     for name, category in MENU_TEMPLATES[template]:
         execute(sql("""
             INSERT INTO menu (restaurant_id, name, price, category, image, available)
-            VALUES (?, ?, ?, ?, ?, 1)
+            VALUES (?, ?, ?, ?, ?, TRUE)
         """), (
             restaurant_id,
             name,
