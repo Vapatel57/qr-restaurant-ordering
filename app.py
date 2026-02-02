@@ -1,7 +1,9 @@
 from flask import (
     Flask, render_template, request, redirect,
-    session, Response, send_file, jsonify
+    session, Response, send_file, jsonify,
+    current_app
 )
+
 from db import get_db, init_db, close_db
 from auth import login_required
 
@@ -190,8 +192,8 @@ def logout():
 def platform_restaurants():
     rows = get_db().execute("""
         SELECT r.id, r.name, r.subdomain,
-               COUNT(o.id) AS total_orders,
-               IFNULL(SUM(o.total),0) AS total_revenue
+       COUNT(o.id) AS total_orders,
+       COALESCE(SUM(o.total), 0) AS total_revenue
         FROM restaurants r
         LEFT JOIN orders o ON r.id=o.restaurant_id
         GROUP BY r.id
@@ -414,7 +416,7 @@ def orders_by_date():
     """, (rid, date)).fetchall()
 
     revenue = db.execute("""
-        SELECT IFNULL(SUM(total),0)
+        SELECT COALESCE(SUM(total), 0)
         FROM orders
         WHERE restaurant_id=?
         AND status='Served'
@@ -818,7 +820,7 @@ def events():
                 """, (rid,)).fetchall()
 
                 revenue = db.execute("""
-                    SELECT IFNULL(SUM(total),0)
+                    SELECT COALESCE(SUM(total), 0)
                     FROM orders
                     WHERE restaurant_id=?
                     AND status='Served'

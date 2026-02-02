@@ -1,23 +1,33 @@
-import sqlite3
 import os
+import sqlite3
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from flask import g
 
+DB_TYPE = os.getenv("DB_TYPE", "sqlite")
+DATABASE_URL = os.getenv("DATABASE_URL")
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "restaurant.db")
+SQLITE_PATH = os.path.join(BASE_DIR, "restaurant.db")
 
 # ---------------- DB CONNECTION ----------------
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(
-            DB_PATH,
-            timeout=10,
-            check_same_thread=False
-        )
-        g.db.row_factory = sqlite3.Row
-
-        # WAL mode for concurrency
-        g.db.execute("PRAGMA journal_mode=WAL;")
-        g.db.execute("PRAGMA synchronous=NORMAL;")
+        if DB_TYPE == "postgres":
+            g.db = psycopg2.connect(
+                DATABASE_URL,
+                cursor_factory=RealDictCursor
+            )
+            g.db.autocommit = True   # 🔥 REQUIRED
+        else:
+            g.db = sqlite3.connect(
+                SQLITE_PATH,
+                timeout=10,
+                check_same_thread=False
+            )
+            g.db.row_factory = sqlite3.Row
+            g.db.execute("PRAGMA journal_mode=WAL;")
+            g.db.execute("PRAGMA synchronous=NORMAL;")
 
     return g.db
 
@@ -25,16 +35,18 @@ def get_db():
 # ---------------- CLOSE CONNECTION ----------------
 def close_db(e=None):
     db = g.pop("db", None)
-    if db is not None:
+    if db:
         db.close()
 
 
-# ---------------- INIT DB ----------------
+# ---------------- INIT DB (SQLITE ONLY) ----------------
 def init_db():
-    db = sqlite3.connect(DB_PATH)
+    if DB_TYPE != "sqlite":
+        return
+
+    db = sqlite3.connect(SQLITE_PATH)
     c = db.cursor()
 
-    # ================= RESTAURANTS =================
     c.execute("""
     CREATE TABLE IF NOT EXISTS restaurants (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -47,7 +59,6 @@ def init_db():
     )
     """)
 
-    # ================= USERS =================
     c.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,7 +71,6 @@ def init_db():
     )
     """)
 
-    # ================= MENU =================
     c.execute("""
     CREATE TABLE IF NOT EXISTS menu (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,7 +85,6 @@ def init_db():
     )
     """)
 
-    # ================= ORDERS =================
     c.execute("""
     CREATE TABLE IF NOT EXISTS orders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -90,7 +99,6 @@ def init_db():
     )
     """)
 
-    # ================= ORDER ADDITIONS (🔥 REQUIRED) =================
     c.execute("""
     CREATE TABLE IF NOT EXISTS order_additions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -107,7 +115,6 @@ def init_db():
     )
     """)
 
-    # ================= INDEXES (PERFORMANCE) =================
     c.execute("CREATE INDEX IF NOT EXISTS idx_orders_restaurant ON orders(restaurant_id)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_additions_restaurant ON order_additions(restaurant_id)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_additions_status ON order_additions(status)")
