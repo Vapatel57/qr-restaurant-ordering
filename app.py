@@ -815,7 +815,7 @@ def events():
                     SELECT *
                     FROM orders
                     WHERE restaurant_id=?
-                    AND DATE(created_at)=DATE('now')
+                    AND created_at::date = CURRENT_DATE
                     ORDER BY id DESC
                 """, (rid,)).fetchall()
 
@@ -824,7 +824,7 @@ def events():
                     FROM orders
                     WHERE restaurant_id=?
                     AND status='Served'
-                    AND DATE(created_at)=DATE('now')
+                    AND created_at::date = CURRENT_DATE
                 """, (rid,)).fetchone()[0]
 
                 payload = {
