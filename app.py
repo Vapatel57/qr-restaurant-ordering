@@ -5,7 +5,7 @@ from flask import (
 from db import get_db, init_db, close_db
 from auth import login_required
 
-import os, json, time, sqlite3, qrcode
+import os, json, time, qrcode
 from zipfile import ZipFile
 from reportlab.pdfgen import canvas
 from flask_dance.contrib.google import make_google_blueprint
@@ -805,34 +805,33 @@ def events():
     rid = session["restaurant_id"]
 
     def stream():
-        while True:
-            conn = sqlite3.connect("restaurant.db")
-            conn.row_factory = sqlite3.Row
+        with current_app.app_context():
+            while True:
+                db = get_db()
 
-            orders = conn.execute("""
-                SELECT *
-                FROM orders
-                WHERE restaurant_id=?
-                AND DATE(created_at)=DATE('now')
-                ORDER BY id DESC
-            """, (rid,)).fetchall()
+                orders = db.execute("""
+                    SELECT *
+                    FROM orders
+                    WHERE restaurant_id=?
+                    AND DATE(created_at)=DATE('now')
+                    ORDER BY id DESC
+                """, (rid,)).fetchall()
 
-            revenue = conn.execute("""
-                SELECT IFNULL(SUM(total),0)
-                FROM orders
-                WHERE restaurant_id=?
-                AND status='Served'
-                AND DATE(created_at)=DATE('now')
-            """, (rid,)).fetchone()[0]
+                revenue = db.execute("""
+                    SELECT IFNULL(SUM(total),0)
+                    FROM orders
+                    WHERE restaurant_id=?
+                    AND status='Served'
+                    AND DATE(created_at)=DATE('now')
+                """, (rid,)).fetchone()[0]
 
-            conn.close()
+                payload = {
+                    "orders": [dict(o) for o in orders],
+                    "today_revenue": revenue
+                }
 
-            yield f"data:{json.dumps({
-                'orders': [dict(o) for o in orders],
-                'today_revenue': revenue
-            })}\n\n"
-
-            time.sleep(2)
+                yield f"data:{json.dumps(payload)}\n\n"
+                time.sleep(2)
 
     return Response(stream(), mimetype="text/event-stream")
 
@@ -842,24 +841,26 @@ def addition_events():
     rid = session["restaurant_id"]
 
     def stream():
-        while True:
-            conn = sqlite3.connect("restaurant.db")
-            conn.row_factory = sqlite3.Row
+        with current_app.app_context():
+            while True:
+                db = get_db()
 
-            additions = conn.execute("""
-                SELECT *
-                FROM order_additions
-                WHERE restaurant_id=?
-                AND status='New'
-                ORDER BY created_at ASC
-            """, (rid,)).fetchall()
+                additions = db.execute("""
+                    SELECT *
+                    FROM order_additions
+                    WHERE restaurant_id=?
+                    AND status='New'
+                    ORDER BY created_at ASC
+                """, (rid,)).fetchall()
 
-            conn.close()
-
-            yield f"data:{json.dumps([dict(a) for a in additions])}\n\n"
-            time.sleep(2)
+                yield f"data:{json.dumps([dict(a) for a in additions])}\n\n"
+                time.sleep(2)
 
     return Response(stream(), mimetype="text/event-stream")
+
+@app.before_request
+def ensure_db():
+    get_db()
 
 # --------------------------------------------------
 # ROOT

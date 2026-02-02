@@ -81,6 +81,7 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         restaurant_id INTEGER NOT NULL,
         table_no INTEGER,
+        customer_name TEXT,
         items TEXT,
         total REAL,
         status TEXT DEFAULT 'Received',
