@@ -121,9 +121,6 @@ def init_db():
 
     db.commit()
     db.close()
-def commit(db):
-    if DB_TYPE != "postgres":
-        db.commit()
 
 def today_clause(column):
     if DB_TYPE == "postgres":
@@ -137,3 +134,29 @@ def sql(query):
     if DB_TYPE == "postgres":
         return query.replace("?", "%s")
     return query
+def execute(query, params=()):
+    db = get_db()
+
+    # Postgres
+    if DB_TYPE == "postgres":
+        cur = db.cursor()
+        cur.execute(query, params)
+        return cur
+
+    # SQLite
+    return db.execute(query, params)
+
+
+def fetchone(query, params=()):
+    cur = execute(query, params)
+    return cur.fetchone()
+
+
+def fetchall(query, params=()):
+    cur = execute(query, params)
+    return cur.fetchall()
+
+
+def commit(db=None):
+    if DB_TYPE == "sqlite":
+        (db or get_db()).commit()
