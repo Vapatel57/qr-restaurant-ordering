@@ -121,3 +121,19 @@ def init_db():
 
     db.commit()
     db.close()
+def commit(db):
+    if DB_TYPE != "postgres":
+        db.commit()
+
+def today_clause(column):
+    if DB_TYPE == "postgres":
+        return f"{column}::date = CURRENT_DATE"
+    return f"DATE({column}) = DATE('now')"
+
+def sql(query):
+    """
+    Converts SQLite placeholders (?) to Postgres (%s) when needed
+    """
+    if DB_TYPE == "postgres":
+        return query.replace("?", "%s")
+    return query
