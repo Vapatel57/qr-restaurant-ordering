@@ -259,19 +259,26 @@ def place_order():
     data = request.get_json()
     items = data["items"]
 
-    total = sum(i["price"] * i["qty"] for i in items)
+    clean_items = []
+    for i in items:
+        clean_items.append({
+            "name": i["name"],
+            "price": float(i["price"]),
+            "qty": int(i["qty"])
+        })
+
+    total = sum(i["price"] * i["qty"] for i in clean_items)
 
     execute(sql("""
         INSERT INTO orders
         (restaurant_id, table_no, customer_name, items, total, status, created_at)
-        VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP)
+        VALUES (?,?,?,?,?, 'Received', CURRENT_TIMESTAMP)
     """), (
         data["restaurant_id"],
         data["table"],
         data.get("customer_name", ""),
-        json.dumps(items),
-        total,
-        "Received"
+        json.dumps(clean_items),
+        total
     ))
 
     commit()
