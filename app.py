@@ -9,6 +9,8 @@ from db import (
     init_db, close_db, today_clause, get_db
 )
 
+import cloudinary
+import cloudinary.uploader
 
 from auth import login_required
 
@@ -33,6 +35,12 @@ app.config.update(
     SESSION_COOKIE_SECURE=bool(os.getenv("RENDER")),
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax"
+)
+cloudinary.config(
+    cloud_name=os.getenv("CLOUDINARY_CLOUD_NAME"),
+    api_key=os.getenv("CLOUDINARY_API_KEY"),
+    api_secret=os.getenv("CLOUDINARY_API_SECRET"),
+    secure=True
 )
 
 app.secret_key = "saas_qr_restaurant_secret"
@@ -569,9 +577,13 @@ def api_add_menu():
     if not image:
         return jsonify({"error": "Image required"}), 400
 
-    filename = f"{int(time.time())}_{image.filename}"
-    path = os.path.join(UPLOAD_FOLDER, filename)
-    image.save(path)
+    # 🔥 Upload to Cloudinary
+    result = cloudinary.uploader.upload(
+        image,
+        folder="menu_images"
+    )
+
+    image_url = result["secure_url"]
 
     execute(sql("""
         INSERT INTO menu
@@ -580,13 +592,14 @@ def api_add_menu():
     """), (
         session["restaurant_id"],
         request.form["name"],
-        request.form["price"],
+        float(request.form["price"]),
         request.form["category"],
-        path
+        image_url
     ))
 
     commit()
     return jsonify({"success": True})
+
 
 @app.route("/api/menu/toggle/<int:item_id>", methods=["POST"])
 @login_required("admin")
@@ -628,7 +641,7 @@ def import_menu_template():
         """), (
             restaurant_id,
             name,
-            0,
+            0.0,
             category,
             ""   # no image initially
         ))
@@ -645,9 +658,11 @@ def update_menu_item(item_id):
     image = request.files.get("image")
 
     if image:
-        filename = f"{int(time.time())}_{image.filename}"
-        path = os.path.join(UPLOAD_FOLDER, filename)
-        image.save(path)
+        result = cloudinary.uploader.upload(
+            image,
+            folder="menu_images"
+        )
+        image_url = result["secure_url"]
 
         execute(sql("""
             UPDATE menu
@@ -655,12 +670,13 @@ def update_menu_item(item_id):
             WHERE id=? AND restaurant_id=?
         """), (
             name,
-            price,
+            float(price),
             category,
-            path,
+            image_url,
             item_id,
             session["restaurant_id"]
         ))
+
     else:
         execute(sql("""
             UPDATE menu
@@ -668,11 +684,12 @@ def update_menu_item(item_id):
             WHERE id=? AND restaurant_id=?
         """), (
             name,
-            price,
+            float(price),
             category,
             item_id,
             session["restaurant_id"]
         ))
+
 
     commit()
     return jsonify({"success": True})
@@ -863,9 +880,8 @@ def events():
     rid = session["restaurant_id"]
 
     def stream():
-        with current_app.app_context():
+        with app.app_context():
             while True:
-
                 orders = fetchall(
                     sql(f"""
                         SELECT *
@@ -888,12 +904,11 @@ def events():
                     (rid,)
                 )
 
-                payload = {
-                    "orders": [dict(o) for o in orders],
-                    "today_revenue": revenue_row["revenue"]
-                }
+                yield f"data:{json.dumps({
+                    'orders': [dict(o) for o in orders],
+                    'today_revenue': revenue_row['revenue']
+                })}\n\n"
 
-                yield f"data:{json.dumps(payload)}\n\n"
                 time.sleep(2)
 
     return Response(stream(), mimetype="text/event-stream")
@@ -904,9 +919,8 @@ def addition_events():
     rid = session["restaurant_id"]
 
     def stream():
-        with current_app.app_context():
+        with app.app_context():
             while True:
-
                 additions = fetchall(
                     sql("""
                         SELECT *
