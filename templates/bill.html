@@ -62,6 +62,9 @@
     Contact: {{ phone }}
 </p>
 
+{% if order.customer_name %}
+<p><b>Customer:</b> {{ order.customer_name }}</p>
+{% endif %}
 
             <div class="mt-4 text-left inline-block text-sm">
                 <p><b>Table:</b> {{ order.table_no }}</p>

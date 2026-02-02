@@ -16,6 +16,10 @@ from menu_templates import MENU_TEMPLATES
 # --------------------------------------------------
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+BASE_URL = os.getenv(
+    "BASE_URL",
+    "http://127.0.0.1:5000"
+)
 
 app = Flask(__name__)
 app.secret_key = "saas_qr_restaurant_secret"
@@ -237,16 +241,18 @@ def place_order():
     total = sum(i["price"] * i["qty"] for i in items)
 
     get_db().execute("""
-        INSERT INTO orders
-        (restaurant_id, table_no, items, total, status, created_at)
-        VALUES (?,?,?,?,?,CURRENT_TIMESTAMP)
+    INSERT INTO orders
+    (restaurant_id, table_no, customer_name, items, total, status, created_at)
+    VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP)
     """, (
-        data["restaurant_id"],
-        data["table"],
-        json.dumps(items),
-        total,
-        "Received"
+    data["restaurant_id"],
+    data["table"],
+    data.get("customer_name", ""),
+    json.dumps(items),
+    total,
+    "Received"
     ))
+
 
     get_db().commit()
     return jsonify({"success": True})
@@ -661,8 +667,7 @@ def generate_single_qr(table_no):
     os.makedirs(qr_dir, exist_ok=True)
 
     qr_path = f"{qr_dir}/table_{table_no}.png"
-    url = f"http://127.0.0.1:5000/customer/{r['subdomain']}?table={table_no}"
-
+    url = f"{BASE_URL}/customer/{r['subdomain']}?table={table_no}"
     qrcode.make(url).save(qr_path)
 
     return jsonify({"success": True, "qr": f"/{qr_path}"})
@@ -685,7 +690,7 @@ def auto_generate_qr():
 
     with ZipFile(zip_path, "w") as zipf:
         for t in range(1, count + 1):
-            url = f"http://127.0.0.1:5000/customer/{r['subdomain']}?table={t}"
+            url = f"{BASE_URL}/customer/{r['subdomain']}?table={t}"
             img = f"{qr_dir}/table_{t}.png"
             qrcode.make(url).save(img)
             zipf.write(img, os.path.basename(img))
@@ -728,6 +733,8 @@ def bill(order_id):
         c = canvas.Canvas(filename)
         c.drawString(100, 780, order["restaurant_name"])
         c.drawString(100, 760, f"Table: {order['table_no']}")
+        if order["customer_name"]:
+            c.drawString(100, 740, f"Customer: {order['customer_name']}")
 
         y = 720
         for i in items:
@@ -864,9 +871,9 @@ def home():
 
 # --------------------------------------------------
 
-# if __name__ == "__main__":
-#     app.run(debug=True)
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run(debug=True)
+# if __name__ == "__main__":
+#     app.run(host="0.0.0.0", port=5000)
 
 
