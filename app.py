@@ -20,6 +20,14 @@ from reportlab.pdfgen import canvas
 from flask_dance.contrib.google import make_google_blueprint
 from werkzeug.security import generate_password_hash, check_password_hash
 from menu_templates import MENU_TEMPLATES
+from decimal import Decimal
+
+def serialize_row(row):
+    return {
+        k: float(v) if isinstance(v, Decimal) else v
+        for k, v in dict(row).items()
+    }
+
 # --------------------------------------------------
 # CONFIG
 # --------------------------------------------------
@@ -904,11 +912,12 @@ def events():
                     (rid,)
                 )
 
-                yield f"data:{json.dumps({
-                    'orders': [dict(o) for o in orders],
-                    'today_revenue': revenue_row['revenue']
-                })}\n\n"
+                payload = {
+                    "orders": [serialize_row(o) for o in orders],
+                    "today_revenue": float(revenue_row["revenue"])
+                }
 
+                yield f"data:{json.dumps(payload)}\n\n"
                 time.sleep(2)
 
     return Response(stream(), mimetype="text/event-stream")

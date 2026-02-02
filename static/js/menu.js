@@ -32,8 +32,11 @@ function loadMenu(category = null) {
                 .filter(item => !category || item.category === category)
                 .forEach(item => {
                     const imgSrc = item.image
-                        ? `/${item.image}`
+                        ? (item.image.startsWith("http")
+                        ? item.image
+                        : `/${item.image}`)
                         : "/static/no-image.png";
+
 
                     menuGrid.innerHTML += `
                         <div class="bg-white rounded-xl shadow overflow-hidden">
