@@ -816,11 +816,26 @@ def bill(order_id):
     if not order:
         return "Order not found", 404
 
-    items = (
+    raw_items = (
     order["items"]
     if isinstance(order["items"], list)
     else json.loads(order["items"])
-    )
+)
+
+    grouped = {}
+
+    for i in raw_items:
+        key = i["name"]
+        if key not in grouped:
+            grouped[key] = {
+                "name": i["name"],
+                "price": i["price"],
+                "qty": 0
+            }
+        grouped[key]["qty"] += i["qty"]
+
+    items = list(grouped.values())
+
 
     subtotal = sum(i["price"] * i["qty"] for i in items)
     gst = round(subtotal * 0.05, 2)
