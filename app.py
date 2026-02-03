@@ -808,17 +808,27 @@ def edit_order(order_id):
     if not order:
         return "Order not found", 404
 
+    # ✅ SAFE PARSE ITEMS
     items = (
         order["items"]
         if isinstance(order["items"], list)
         else json.loads(order["items"] or "[]")
     )
 
+    # ✅ CALCULATE TOTALS
+    subtotal = sum(i["price"] * i["qty"] for i in items)
+    gst = round(subtotal * 0.05, 2)
+    total = round(subtotal + gst, 2)
+
     return render_template(
         "edit_bill.html",
         order=order,
-        items=items
+        items=items,
+        subtotal=subtotal,
+        gst=gst,
+        total=total
     )
+
 
 @app.route("/bill/<int:order_id>")
 @login_required("admin")
