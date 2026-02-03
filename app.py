@@ -374,6 +374,17 @@ def add_item_to_order(order_id):
         order_id,
         session["restaurant_id"]
     ))
+    execute(sql("""
+        INSERT INTO order_items
+        (order_id, restaurant_id, item_name, price, qty)
+        VALUES (?, ?, ?, ?, ?)
+    """), (
+        order_id,
+        session["restaurant_id"],
+        item["name"],
+        price,
+        qty
+    ))
 
     # 6️⃣ Insert kitchen addition
     execute(sql("""
