@@ -135,19 +135,20 @@ function addToOrder(itemId) {
     const qty = prompt("Enter quantity", 1);
     if (!qty || qty <= 0) return;
 
-    fetch(`/api/order/${ORDER_ID}/add-item`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            item_id: itemId,
-            qty: qty
-        })
+    fetch(`/api/order/${orderId}/add-item`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+        item_id: itemId,
+        qty: qty
     })
-        .then(res => res.json())
-        .then(() => {
-            alert("Item added to order & sent to kitchen 🍽️");
-            window.location.href = "/admin";
-        });
+    })
+    .then(res => res.json())
+    .then(r => {
+        if (r.success) alert("Item added");
+        else alert(r.error || "Failed");
+    });
+
 }
 /* add item to table  */
 let selectedItemId = null;

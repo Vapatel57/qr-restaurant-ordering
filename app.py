@@ -351,7 +351,12 @@ def add_item_to_order(order_id):
     if not order:
         return jsonify({"error": "Order not found"}), 404
 
-    items = json.loads(order["items"])
+    items = (
+    order["items"]
+    if isinstance(order["items"], list)
+    else json.loads(order["items"])
+)
+
 
     # 🔹 Add item to order (billing)
     items.append({
@@ -815,7 +820,12 @@ def bill(order_id):
     if not order:
         return "Order not found", 404
 
-    items = json.loads(order["items"])
+    items = (
+    order["items"]
+    if isinstance(order["items"], list)
+    else json.loads(order["items"])
+    )
+
     subtotal = sum(i["price"] * i["qty"] for i in items)
     gst = round(subtotal * 0.05, 2)
     total = round(subtotal + gst, 2)
