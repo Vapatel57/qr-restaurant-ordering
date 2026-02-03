@@ -51,11 +51,15 @@ function renderOrders(orders) {
 }
 
 function loadKitchenOrders() {
-    fetch("/api/orders")
-        .then(res => res.json())
+    fetch("/api/kitchen/orders")
+        .then(res => {
+            if (!res.ok) throw new Error("Forbidden");
+            return res.json();
+        })
         .then(renderOrders)
-        .catch(console.error);
+        .catch(err => console.error("Kitchen orders error:", err));
 }
+
 
 async function updateStatus(orderId, status) {
     if (updatingOrders.has(orderId)) return;

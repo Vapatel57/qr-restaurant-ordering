@@ -720,7 +720,7 @@ def update_menu_item(item_id):
 # --------------------------------------------------
 
 @app.route("/api/order/<int:order_id>/status", methods=["POST"])
-@login_required(["admin", "kitchen"])
+@login_required("kitchen")
 def update_order_status(order_id):
     status = request.json.get("status")
 
@@ -728,12 +728,14 @@ def update_order_status(order_id):
         return jsonify({"error": "Invalid status"}), 400
 
     execute(sql("""
-        UPDATE orders SET status=?
+        UPDATE orders
+        SET status=?
         WHERE id=? AND restaurant_id=?
     """), (status, order_id, session["restaurant_id"]))
 
     commit()
     return jsonify({"success": True})
+
 
 # --------------------------------------------------
 # QR GENERATION
@@ -967,7 +969,7 @@ def thermal_bill(order_id):
 
 #     return Response(stream(), mimetype="text/event-stream")
 @app.route("/api/orders")
-@login_required(["admin", "kitchen"])
+@login_required("admin")
 def api_orders():
     rid = session["restaurant_id"]
 
@@ -977,6 +979,23 @@ def api_orders():
         WHERE restaurant_id=?
         ORDER BY id DESC
         LIMIT 50
+    """), (rid,))
+
+    return jsonify([
+        {k: json_safe(v) for k, v in dict(o).items()}
+        for o in orders
+    ])
+@app.route("/api/kitchen/orders")
+@login_required("kitchen")
+def kitchen_orders():
+    rid = session["restaurant_id"]
+
+    orders = fetchall(sql("""
+        SELECT id, table_no, items, status
+        FROM orders
+        WHERE restaurant_id=?
+        AND status != 'Served'
+        ORDER BY id DESC
     """), (rid,))
 
     return jsonify([
