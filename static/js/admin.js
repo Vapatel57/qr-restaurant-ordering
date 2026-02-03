@@ -9,6 +9,59 @@ function loadOrders() {
         .then(renderOrders)
         .catch(console.error);
 }
+let currentOrderId = null;
+
+function openAddItem(orderId) {
+    currentOrderId = orderId;
+
+    fetch("/api/menu")
+        .then(res => res.json())
+        .then(menu => {
+            const select = document.getElementById("add-item-select");
+            select.innerHTML = "";
+
+            menu.forEach(item => {
+                if (item.available) {
+                    select.innerHTML += `
+                        <option value="${item.id}">
+                            ${item.name} – ₹${item.price}
+                        </option>`;
+                }
+            });
+
+            document.getElementById("add-item-qty").value = 1;
+            document.getElementById("add-item-modal").classList.remove("hidden");
+        });
+}
+
+function closeAddItem() {
+    document.getElementById("add-item-modal").classList.add("hidden");
+}
+
+function confirmAddItem() {
+    const itemId = document.getElementById("add-item-select").value;
+    const qty = parseInt(document.getElementById("add-item-qty").value);
+
+    if (!itemId || qty < 1) {
+        alert("Invalid item");
+        return;
+    }
+
+    fetch(`/api/order/${currentOrderId}/add-item`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+        item_id: itemId,
+        qty: qty
+    })
+})
+
+    .then(() => {
+        closeAddItem();
+        loadOrders(); // refresh admin table
+    });
+}
+
 function openEditBill(orderId, tableNo) {
     // reuse your existing menu add/remove logic
     window.location.href = `/menu?add_to_order=${orderId}&table=${tableNo}`;

@@ -24,7 +24,11 @@ function renderOrders(orders) {
     }
 
     active.forEach(o => {
-        const items = JSON.parse(o.items)
+        const itemsArr = Array.isArray(o.items)
+            ? o.items
+            : JSON.parse(o.items);
+
+        const items = itemsArr
             .map(i => `${i.qty} × ${i.name}`)
             .join("<br>");
 
@@ -34,12 +38,14 @@ function renderOrders(orders) {
             "Served";
 
         ordersContainer.innerHTML += `
-            <div class="bg-white w-80 rounded-xl shadow-xl">
+            <div class="bg-white w-80 rounded-xl shadow-xl text-gray-900">
                 <div class="p-4 border-b">
                     <h2 class="text-3xl font-black">TABLE ${o.table_no}</h2>
                     <p class="text-xs text-gray-400">ORDER #${o.id}</p>
                 </div>
+
                 <div class="p-4 text-sm">${items}</div>
+
                 <div class="p-4 bg-gray-50">
                     <button onclick="updateStatus(${o.id}, '${next}')"
                         class="w-full py-3 bg-emerald-600 text-white rounded-lg font-bold">
@@ -49,6 +55,7 @@ function renderOrders(orders) {
             </div>`;
     });
 }
+
 
 function loadKitchenOrders() {
     fetch("/api/kitchen/orders")
