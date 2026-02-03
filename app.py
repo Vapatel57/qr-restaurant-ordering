@@ -793,6 +793,29 @@ def auto_generate_qr():
 # --------------------------------------------------
 # BILLING
 # --------------------------------------------------
+@app.route("/admin/order/<int:order_id>/edit")
+@login_required("admin")
+def edit_order(order_id):
+    order = fetchone(sql("""
+        SELECT *
+        FROM orders
+        WHERE id=? AND restaurant_id=?
+    """), (order_id, session["restaurant_id"]))
+
+    if not order:
+        return "Order not found", 404
+
+    items = (
+        order["items"]
+        if isinstance(order["items"], list)
+        else json.loads(order["items"] or "[]")
+    )
+
+    return render_template(
+        "edit_bill.html",
+        order=order,
+        items=items
+    )
 
 @app.route("/bill/<int:order_id>")
 @login_required("admin")
