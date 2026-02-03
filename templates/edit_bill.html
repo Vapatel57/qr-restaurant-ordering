@@ -101,19 +101,30 @@
                     {% endfor %}
                 </select>
 
-                <input type="number"
-                       id="item-qty"
-                       value="1"
-                       min="1"
-                       class="w-full border rounded px-3 py-2">
+                <input id="menu-search"
+       type="text"
+       placeholder="Search item..."
+       class="w-full border p-2 rounded mb-2">
 
-                <button
-                    onclick="addItem()"
-                    class="w-full bg-emerald-600
-                           hover:bg-emerald-700
-                           text-white py-2 rounded font-bold">
-                    <i class="fas fa-plus"></i> Add Item
-                </button>
+<select id="menu-category"
+        class="w-full border p-2 rounded mb-2">
+    <option value="">All Categories</option>
+</select>
+
+<select id="menu-items"
+        class="w-full border p-2 rounded mb-2"></select>
+
+<input id="menu-qty"
+       type="number"
+       min="1"
+       value="1"
+       class="w-full border p-2 rounded mb-3">
+
+<button onclick="addItemToOrder()"
+        class="bg-emerald-600 text-white w-full py-2 rounded font-bold">
+    + Add Item
+</button>
+
             </div>
         </div>
 
@@ -121,37 +132,76 @@
 </div>
 
 <script>
-function addItem() {
-    const itemId = document.getElementById("item-select").value;
-    const qty = document.getElementById("item-qty").value;
+let MENU = [];
+
+fetch("/api/menu")
+  .then(r => r.json())
+  .then(data => {
+      MENU = data.filter(i => i.available);
+      populateCategories();
+      renderMenu();
+  });
+
+function populateCategories() {
+    const cat = document.getElementById("menu-category");
+    [...new Set(MENU.map(i => i.category))].forEach(c => {
+        cat.innerHTML += `<option value="${c}">${c}</option>`;
+    });
+}
+
+function renderMenu() {
+    const search = document.getElementById("menu-search").value.toLowerCase();
+    const category = document.getElementById("menu-category").value;
+    const select = document.getElementById("menu-items");
+
+    select.innerHTML = "";
+
+    MENU.filter(i =>
+        (!category || i.category === category) &&
+        i.name.toLowerCase().includes(search)
+    ).forEach(i => {
+        select.innerHTML += `
+          <option value="${i.id}">
+            ${i.name} – ₹${i.price}
+          </option>`;
+    });
+}
+
+document.getElementById("menu-search").oninput = renderMenu;
+document.getElementById("menu-category").onchange = renderMenu;
+
+function addItemToOrder() {
+    const itemId = document.getElementById("menu-items").value;
+    const qty = parseInt(document.getElementById("menu-qty").value);
 
     fetch(`/api/order/{{ order.id }}/add-item`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ item_id: itemId, qty })
     })
-    .then(res => res.json())
+    .then(r => r.json())
     .then(r => {
         if (r.success) location.reload();
-        else alert(r.error || "Failed to add item");
+        else alert(r.error || "Failed");
     });
 }
 
 function removeItem(name) {
-    if (!confirm("Remove this item from bill?")) return;
+    if (!confirm("Remove item from bill?")) return;
 
     fetch(`/api/order/{{ order.id }}/remove-item`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ item_name: name })
     })
-    .then(res => res.json())
+    .then(r => r.json())
     .then(r => {
         if (r.success) location.reload();
-        else alert(r.error || "Failed to remove item");
+        else alert(r.error || "Failed");
     });
 }
 </script>
+
 
 </body>
 </html>

@@ -915,7 +915,12 @@ def remove_item_from_order(order_id):
     if not order:
         return jsonify({"error": "Order not found"}), 404
 
-    items = json.loads(order["items"])
+    # ✅ SAFE PARSE
+    items = order["items"]
+    if isinstance(items, str):
+        items = json.loads(items)
+    elif items is None:
+        items = []
 
     new_items = []
     removed_total = 0
@@ -944,6 +949,7 @@ def remove_item_from_order(order_id):
 
     commit()
     return jsonify({"success": True})
+
 
 
 
