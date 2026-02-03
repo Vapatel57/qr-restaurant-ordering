@@ -4,35 +4,36 @@ const pendingCount = document.getElementById("pending-count");
 
 const updatingOrders = new Set();
 
+/* ================= RENDER ORDERS ================= */
+
 function renderOrders(orders) {
     ordersContainer.innerHTML = "";
 
-    const active = orders.filter(o =>
-        o.status === "Received" ||
-        o.status === "Preparing" ||
-        o.status === "Ready"
+    const activeOrders = orders.filter(o =>
+        ["Received", "Preparing", "Ready"].includes(o.status)
     );
 
-    pendingCount.innerText = active.length;
+    pendingCount.innerText = activeOrders.length;
 
-    if (active.length === 0) {
+    if (!activeOrders.length) {
         ordersContainer.innerHTML = `
             <div class="text-gray-400 text-xl">
                 No active orders 👨‍🍳
-            </div>`;
+            </div>
+        `;
         return;
     }
 
-    active.forEach(o => {
-        const itemsArr = Array.isArray(o.items)
+    activeOrders.forEach(o => {
+        const items = Array.isArray(o.items)
             ? o.items
-            : JSON.parse(o.items);
+            : JSON.parse(o.items || "[]");
 
-        const items = itemsArr
+        const itemHtml = items
             .map(i => `${i.qty} × ${i.name}`)
             .join("<br>");
 
-        const next =
+        const nextStatus =
             o.status === "Received" ? "Preparing" :
             o.status === "Preparing" ? "Ready" :
             "Served";
@@ -44,69 +45,99 @@ function renderOrders(orders) {
                     <p class="text-xs text-gray-400">ORDER #${o.id}</p>
                 </div>
 
-                <div class="p-4 text-sm">${items}</div>
+                <div class="p-4 text-sm">${itemHtml}</div>
 
                 <div class="p-4 bg-gray-50">
-                    <button onclick="updateStatus(${o.id}, '${next}')"
+                    <button
+                        onclick="updateStatus(${o.id}, '${nextStatus}')"
                         class="w-full py-3 bg-emerald-600 text-white rounded-lg font-bold">
-                        Mark ${next}
+                        Mark ${nextStatus}
                     </button>
                 </div>
-            </div>`;
+            </div>
+        `;
     });
 }
 
+/* ================= LOAD ORDERS ================= */
 
 function loadKitchenOrders() {
     fetch("/api/kitchen/orders")
         .then(res => {
-            if (!res.ok) throw new Error("Forbidden or failed");
+            if (!res.ok) throw new Error("Failed to load orders");
             return res.json();
         })
         .then(renderOrders)
         .catch(err => console.error("Kitchen orders error:", err));
 }
 
-
+/* ================= UPDATE ORDER STATUS ================= */
 
 async function updateStatus(orderId, status) {
     if (updatingOrders.has(orderId)) return;
+
     updatingOrders.add(orderId);
 
-    await fetch(`/api/order/${orderId}/status`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status })
-    });
+    try {
+        const res = await fetch(`/api/order/${orderId}/status`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status })
+        });
 
-    updatingOrders.delete(orderId);
-    loadKitchenOrders();
+        if (!res.ok) throw new Error("Status update failed");
+
+        loadKitchenOrders();   // 🔥 refresh orders
+    } catch (err) {
+        console.error(err);
+        alert("Failed to update order status");
+    } finally {
+        updatingOrders.delete(orderId);
+    }
 }
+
+/* ================= LOAD ADDITIONS ================= */
 
 function loadAdditions() {
     fetch("/api/kitchen/additions")
         .then(res => res.json())
         .then(additions => {
-            additionsContainer.innerHTML = additions.length
-                ? additions.map(a => `
-                    <div class="bg-red-600 text-white p-4 rounded-lg mb-3">
-                        <h3 class="font-black">TABLE ${a.table_no}</h3>
-                        <p>${a.qty} × ${a.item_name}</p>
-                        <button onclick="markAdditionDone(${a.id})"
-                            class="mt-3 bg-black px-4 py-2 rounded">
-                            Mark Preparing
-                        </button>
-                    </div>`).join("")
-                : `<p class="text-gray-400">No new additions</p>`;
-        });
+            if (!additions.length) {
+                additionsContainer.innerHTML =
+                    `<p class="text-gray-400">No new additions</p>`;
+                return;
+            }
+
+            additionsContainer.innerHTML = additions.map(a => `
+                <div class="bg-red-600 text-white p-4 rounded-lg mb-3">
+                    <h3 class="font-black">TABLE ${a.table_no}</h3>
+                    <p>${a.qty} × ${a.item_name}</p>
+                    <button
+                        onclick="markAdditionDone(${a.id})"
+                        class="mt-3 bg-black px-4 py-2 rounded">
+                        Mark Preparing
+                    </button>
+                </div>
+            `).join("");
+        })
+        .catch(err => console.error("Additions error:", err));
 }
+
+/* ================= UPDATE ADDITION STATUS ================= */
 
 function markAdditionDone(id) {
     fetch(`/api/kitchen/addition/${id}/status`, { method: "POST" })
-        .then(loadAdditions);
+        .then(() => {
+            loadAdditions();      // 🔥 remove from additions
+            loadKitchenOrders();  // 🔥 reflect updated items
+        })
+        .catch(() => alert("Failed to update addition"));
 }
+
+/* ================= INIT ================= */
 
 loadKitchenOrders();
 loadAdditions();
+
 setInterval(loadKitchenOrders, 3000);
 setInterval(loadAdditions, 3000);
