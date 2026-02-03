@@ -334,7 +334,6 @@ def add_item_to_order(order_id):
     if not item:
         return jsonify({"error": "Menu item not found"}), 404
 
-    # 🔥 FORCE Decimal → float
     price = float(item["price"])
 
     # 2️⃣ Fetch order
@@ -347,14 +346,14 @@ def add_item_to_order(order_id):
     if not order:
         return jsonify({"error": "Order not found"}), 404
 
-    # 3️⃣ Parse items safely
+    # 3️⃣ Parse items
     items = order["items"]
     if isinstance(items, str):
         items = json.loads(items)
-    elif items is None:
+    if not items:
         items = []
 
-    # 4️⃣ Append new item (NO Decimal)
+    # 4️⃣ Add item
     items.append({
         "name": item["name"],
         "price": price,
@@ -374,19 +373,8 @@ def add_item_to_order(order_id):
         order_id,
         session["restaurant_id"]
     ))
-    execute(sql("""
-        INSERT INTO order_items
-        (order_id, restaurant_id, item_name, price, qty)
-        VALUES (?, ?, ?, ?, ?)
-    """), (
-        order_id,
-        session["restaurant_id"],
-        item["name"],
-        price,
-        qty
-    ))
 
-    # 6️⃣ Insert kitchen addition
+    # 6️⃣ Kitchen addition
     execute(sql("""
         INSERT INTO order_additions
         (order_id, restaurant_id, table_no, item_name, qty, price, status, created_at)
@@ -402,6 +390,7 @@ def add_item_to_order(order_id):
 
     commit()
     return jsonify({"success": True})
+
 
 # -----------------------
 #    KITCHEN
