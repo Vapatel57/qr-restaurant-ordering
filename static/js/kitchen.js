@@ -2,11 +2,10 @@ const ordersContainer = document.getElementById("orders-container");
 const additionsContainer = document.getElementById("additions");
 const pendingCount = document.getElementById("pending-count");
 
-let lastOrders = [];
 const updatingOrders = new Set();
 
 /* ===============================
-   NORMAL ORDERS (FROM /events)
+   RENDER KITCHEN ORDERS
 ================================ */
 function renderOrders(orders) {
     ordersContainer.innerHTML = "";
@@ -55,7 +54,20 @@ function renderOrders(orders) {
 }
 
 /* ===============================
-   ORDER STATUS UPDATE
+   LOAD ORDERS (POLLING)
+================================ */
+function loadKitchenOrders() {
+    fetch("/api/orders")
+        .then(res => {
+            if (!res.ok) throw new Error("Failed to load orders");
+            return res.json();
+        })
+        .then(renderOrders)
+        .catch(err => console.error("Kitchen orders error:", err));
+}
+
+/* ===============================
+   UPDATE ORDER STATUS
 ================================ */
 async function updateStatus(orderId, status) {
     if (updatingOrders.has(orderId)) return;
@@ -69,21 +81,11 @@ async function updateStatus(orderId, status) {
     });
 
     updatingOrders.delete(orderId);
+    loadKitchenOrders(); // refresh after update
 }
 
 /* ===============================
-   SSE – ONLY NORMAL ORDERS
-================================ */
-const source = new EventSource("/events");
-
-source.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    lastOrders = data.orders;
-    renderOrders(lastOrders);
-};
-
-/* ===============================
-   🔥 NEW ITEM ADDITIONS (POLLING)
+   🔥 NEW ITEM ADDITIONS
 ================================ */
 function loadAdditions() {
     fetch("/api/kitchen/additions")
@@ -116,7 +118,8 @@ function loadAdditions() {
                     </div>
                 `;
             });
-        });
+        })
+        .catch(err => console.error("Additions error:", err));
 }
 
 function markAdditionDone(id) {
@@ -127,8 +130,12 @@ function markAdditionDone(id) {
     }).then(loadAdditions);
 }
 
-/* 🔁 Poll every 3 seconds */
-setInterval(loadAdditions, 3000);
-
-/* Initial load */
+/* ===============================
+   INIT
+================================ */
+loadKitchenOrders();
 loadAdditions();
+
+/* Refresh every 3 seconds */
+setInterval(loadKitchenOrders, 3000);
+setInterval(loadAdditions, 3000);

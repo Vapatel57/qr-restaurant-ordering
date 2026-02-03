@@ -21,7 +21,7 @@ from flask_dance.contrib.google import make_google_blueprint
 from werkzeug.security import generate_password_hash, check_password_hash
 from menu_templates import MENU_TEMPLATES
 from decimal import Decimal
-from decimal import Decimal
+from datetime import datetime
 def serialize_row(row):
     return {
         k: float(v) if isinstance(v, Decimal) else v
@@ -403,18 +403,23 @@ def kitchen():
 # 🔥 ONLY NEW ADDITIONS
 @app.route("/api/kitchen/additions")
 @login_required("kitchen")
-def kitchen_additions():
-    rows = fetchall(
-        sql("""
-            SELECT *
-            FROM order_additions
-            WHERE restaurant_id=? AND status='New'
-            ORDER BY created_at ASC
-        """),
-        (session["restaurant_id"],)
-    )
+def api_kitchen_additions():
+    rid = session["restaurant_id"]
 
-    return jsonify([dict(r) for r in rows])
+    rows = fetchall(sql("""
+        SELECT *
+        FROM order_additions
+        WHERE restaurant_id=?
+        AND status='New'
+        ORDER BY created_at ASC
+        LIMIT 50
+    """), (rid,))
+
+    return jsonify([
+        {k: json_safe(v) for k, v in dict(r).items()}
+        for r in rows
+    ])
+
 
 @app.route("/api/kitchen/addition/<int:id>/status", methods=["POST"])
 @login_required("kitchen")
@@ -890,77 +895,94 @@ def thermal_bill(order_id):
 # SSE (ORDERS + REVENUE)
 # --------------------------------------------------
 
-@app.route("/events")
-@login_required(["admin", "kitchen"])
-def events():
+# @app.route("/events")
+# @login_required(["admin", "kitchen"])
+# def events():
+#     rid = session["restaurant_id"]
+
+#     def stream():
+#         with app.app_context():
+#             while True:
+#                 orders = fetchall(
+#                     sql(f"""
+#                         SELECT *
+#                         FROM orders
+#                         WHERE restaurant_id=?
+#                         AND {today_clause("created_at")}
+#                         ORDER BY id DESC
+#                     """),
+#                     (rid,)
+#                 )
+
+#                 revenue_row = fetchone(
+#                     sql(f"""
+#                         SELECT COALESCE(SUM(total), 0) AS revenue
+#                         FROM orders
+#                         WHERE restaurant_id=?
+#                         AND status='Served'
+#                         AND {today_clause("created_at")}
+#                     """),
+#                     (rid,)
+#                 )
+
+#                 payload = {
+#                     "orders": [
+#                         {k: json_safe(v) for k, v in dict(o).items()}
+#                         for o in orders
+#                         ],
+#                         "today_revenue": float(revenue_row["revenue"] or 0)
+#                 }
+
+
+#                 yield f"data:{json.dumps(payload)}\n\n"
+#                 time.sleep(2)
+
+#     return Response(stream(), mimetype="text/event-stream")
+
+# @app.route("/events/additions")
+# @login_required("kitchen")
+# def addition_events():
+#     rid = session["restaurant_id"]
+
+#     def stream():
+#         with app.app_context():
+#             while True:
+#                 additions = fetchall(
+#                     sql("""
+#                         SELECT *
+#                         FROM order_additions
+#                         WHERE restaurant_id=?
+#                         AND status='New'
+#                         ORDER BY created_at ASC
+#                     """),
+#                     (rid,)
+#                 )
+
+#                 yield f"data:{json.dumps([
+#                     {k: json_safe(v) for k, v in dict(a).items()}
+#                     for a in additions
+#                 ])}\n\n"
+
+#                 time.sleep(2)
+
+#     return Response(stream(), mimetype="text/event-stream")
+@app.route("/api/orders")
+@login_required("admin")
+def api_orders():
     rid = session["restaurant_id"]
 
-    def stream():
-        with app.app_context():
-            while True:
-                orders = fetchall(
-                    sql(f"""
-                        SELECT *
-                        FROM orders
-                        WHERE restaurant_id=?
-                        AND {today_clause("created_at")}
-                        ORDER BY id DESC
-                    """),
-                    (rid,)
-                )
+    orders = fetchall(sql("""
+        SELECT *
+        FROM orders
+        WHERE restaurant_id=?
+        ORDER BY id DESC
+        LIMIT 50
+    """), (rid,))
 
-                revenue_row = fetchone(
-                    sql(f"""
-                        SELECT COALESCE(SUM(total), 0) AS revenue
-                        FROM orders
-                        WHERE restaurant_id=?
-                        AND status='Served'
-                        AND {today_clause("created_at")}
-                    """),
-                    (rid,)
-                )
-
-                payload = {
-                    "orders": [
-                        {k: json_safe(v) for k, v in dict(o).items()}
-                        for o in orders
-                        ],
-                        "today_revenue": float(revenue_row["revenue"] or 0)
-                }
-
-
-                yield f"data:{json.dumps(payload)}\n\n"
-                time.sleep(2)
-
-    return Response(stream(), mimetype="text/event-stream")
-
-@app.route("/events/additions")
-@login_required("kitchen")
-def addition_events():
-    rid = session["restaurant_id"]
-
-    def stream():
-        with app.app_context():
-            while True:
-                additions = fetchall(
-                    sql("""
-                        SELECT *
-                        FROM order_additions
-                        WHERE restaurant_id=?
-                        AND status='New'
-                        ORDER BY created_at ASC
-                    """),
-                    (rid,)
-                )
-
-                yield f"data:{json.dumps([
-                    {k: json_safe(v) for k, v in dict(a).items()}
-                    for a in additions
-                ])}\n\n"
-
-                time.sleep(2)
-
-    return Response(stream(), mimetype="text/event-stream")
+    return jsonify([
+        {k: json_safe(v) for k, v in dict(o).items()}
+        for o in orders
+    ])
 
 # --------------------------------------------------
 # ROOT

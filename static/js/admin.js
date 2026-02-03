@@ -4,13 +4,7 @@ const pendingCount = document.getElementById("pending-count");
 const revenueEl = document.getElementById("today-revenue");
 
 /* =========================
-   GLOBAL STATE
-========================= */
-let currentOrderId = null;
-let menuCache = [];
-
-/* =========================
-   RENDER TODAY ORDERS
+   RENDER ORDERS
 ========================= */
 function renderOrders(orders) {
     tableBody.innerHTML = "";
@@ -49,10 +43,10 @@ function renderOrders(orders) {
                     </button>
 
                     <button
-      onclick="location.href='/menu?add_to_order=${o.id}&table=${o.table_no}'"
-      class="bg-blue-600 text-white px-3 py-1 rounded text-sm">
-      + Item
-    </button>
+                        onclick="location.href='/menu?add_to_order=${o.id}&table=${o.table_no}'"
+                        class="bg-blue-600 text-white px-3 py-1 rounded text-sm">
+                        + Item
+                    </button>
 
                     <a href="/bill/${o.id}"
                        class="bg-emerald-600 text-white px-3 py-1 rounded text-sm">
@@ -75,6 +69,30 @@ function renderOrders(orders) {
 }
 
 /* =========================
+   LOAD ORDERS (POLLING)
+========================= */
+function loadOrders() {
+    fetch("/api/orders")
+        .then(res => {
+            if (!res.ok) throw new Error("Failed to load orders");
+            return res.json();
+        })
+        .then(orders => {
+            renderOrders(orders);
+
+            // calculate today's revenue
+            const revenue = orders
+                .filter(o => o.status === "Served")
+                .reduce((sum, o) => sum + Number(o.total), 0);
+
+            revenueEl.innerText = `₹${revenue}`;
+        })
+        .catch(err => {
+            console.error("Order load error:", err);
+        });
+}
+
+/* =========================
    UPDATE ORDER STATUS
 ========================= */
 function updateStatus(orderId, status) {
@@ -82,78 +100,13 @@ function updateStatus(orderId, status) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status })
-    });
-}
-
-/* =========================
-   ADD ITEM TO ORDER (ADMIN)
-========================= */
-function openAddItem(orderId) {
-    currentOrderId = orderId;
-
-    fetch("/api/menu")
-        .then(res => res.json())
-        .then(menu => {
-            menuCache = menu;
-
-            const select = document.getElementById("add-item-select");
-            select.innerHTML = "";
-
-            menu.forEach(item => {
-                if (item.available) {
-                    select.innerHTML += `
-                        <option value="${item.id}">
-                            ${item.name} – ₹${item.price}
-                        </option>
-                    `;
-                }
-            });
-
-            document.getElementById("add-item-qty").value = 1;
-            document.getElementById("add-item-modal").classList.remove("hidden");
-        });
-}
-
-function closeAddItem() {
-    document.getElementById("add-item-modal").classList.add("hidden");
-}
-
-function confirmAddItem() {
-    const itemId = document.getElementById("add-item-select").value;
-    const qty = parseInt(document.getElementById("add-item-qty").value);
-
-    if (!itemId || qty < 1) return alert("Invalid item");
-
-    fetch("/api/order/add-item", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            order_id: currentOrderId,
-            item_id: itemId,
-            qty: qty
-        })
     }).then(() => {
-        closeAddItem();
+        loadOrders(); // refresh after update
     });
 }
 
 /* =========================
-   SSE – TODAY ONLY
-========================= */
-const source = new EventSource("/events");
-
-source.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    renderOrders(data.orders);
-    revenueEl.innerText = `₹${data.today_revenue}`;
-};
-
-source.onerror = () => {
-    console.warn("SSE disconnected");
-};
-
-/* =========================
-   PAST DAYS HISTORY
+   HISTORY (PAST DAYS)
 ========================= */
 function openHistory() {
     document.getElementById("history-modal").classList.remove("hidden");
@@ -185,3 +138,9 @@ function loadHistory() {
             document.getElementById("history-result").innerHTML = html;
         });
 }
+
+/* =========================
+   INIT
+========================= */
+loadOrders();                 // initial load
+setInterval(loadOrders, 3000); // refresh every 3 seconds
