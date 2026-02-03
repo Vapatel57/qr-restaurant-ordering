@@ -967,7 +967,7 @@ def thermal_bill(order_id):
 
 #     return Response(stream(), mimetype="text/event-stream")
 @app.route("/api/orders")
-@login_required("admin")
+@login_required(["admin", "kitchen"])
 def api_orders():
     rid = session["restaurant_id"]
 

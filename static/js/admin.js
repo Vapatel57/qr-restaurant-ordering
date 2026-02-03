@@ -40,9 +40,14 @@ function renderOrders(orders) {
         if (o.status !== "Served") pending++;
         if (o.status === "Served") revenue += Number(o.total);
 
-        const items = JSON.parse(o.items)
-            .map(i => `${i.qty}× ${i.name}`)
-            .join(", ");
+        const itemsArr = Array.isArray(o.items)
+    ? o.items
+    : JSON.parse(o.items);
+
+const items = itemsArr
+    .map(i => `${i.qty}× ${i.name}`)
+    .join(", ");
+
 
         tableBody.innerHTML += `
             <tr class="border-b hover:bg-gray-50">
