@@ -7,7 +7,7 @@
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
 <body class="bg-gray-100 min-h-screen">
@@ -24,7 +24,7 @@
         </div>
 
         <a href="/admin"
-           class="bg-gray-700 text-white px-4 py-2 rounded">
+           class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded">
             ← Back to Dashboard
         </a>
     </div>
@@ -56,7 +56,7 @@
 
                         <button
                             onclick="removeItem('{{ i.name }}')"
-                            class="bg-red-500 text-white px-3 py-1 rounded text-sm">
+                            class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -89,41 +89,31 @@
                 Add Item
             </div>
 
-            <div class="p-4 space-y-4">
-                <select id="item-select"
-                        class="w-full border rounded px-3 py-2">
-                    {% for m in menu %}
-                    {% if m.available %}
-                    <option value="{{ m.id }}">
-                        {{ m.name }} – ₹{{ m.price }}
-                    </option>
-                    {% endif %}
-                    {% endfor %}
-                </select>
+            <div class="p-4 space-y-3">
 
                 <input id="menu-search"
-       type="text"
-       placeholder="Search item..."
-       class="w-full border p-2 rounded mb-2">
+                       type="text"
+                       placeholder="Search item..."
+                       class="w-full border p-2 rounded">
 
-<select id="menu-category"
-        class="w-full border p-2 rounded mb-2">
-    <option value="">All Categories</option>
-</select>
+                <select id="menu-category"
+                        class="w-full border p-2 rounded">
+                    <option value="">All Categories</option>
+                </select>
 
-<select id="menu-items"
-        class="w-full border p-2 rounded mb-2"></select>
+                <select id="menu-items"
+                        class="w-full border p-2 rounded"></select>
 
-<input id="menu-qty"
-       type="number"
-       min="1"
-       value="1"
-       class="w-full border p-2 rounded mb-3">
+                <input id="menu-qty"
+                       type="number"
+                       min="1"
+                       value="1"
+                       class="w-full border p-2 rounded">
 
-<button onclick="addItemToOrder()"
-        class="bg-emerald-600 text-white w-full py-2 rounded font-bold">
-    + Add Item
-</button>
+                <button onclick="addItemToOrder()"
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white w-full py-2 rounded font-bold">
+                    + Add Item
+                </button>
 
             </div>
         </div>
@@ -134,6 +124,7 @@
 <script>
 let MENU = [];
 
+// Load menu
 fetch("/api/menu")
   .then(r => r.json())
   .then(data => {
@@ -144,7 +135,8 @@ fetch("/api/menu")
 
 function populateCategories() {
     const cat = document.getElementById("menu-category");
-    [...new Set(MENU.map(i => i.category))].forEach(c => {
+    const categories = [...new Set(MENU.map(i => i.category))];
+    categories.forEach(c => {
         cat.innerHTML += `<option value="${c}">${c}</option>`;
     });
 }
@@ -174,6 +166,11 @@ function addItemToOrder() {
     const itemId = document.getElementById("menu-items").value;
     const qty = parseInt(document.getElementById("menu-qty").value);
 
+    if (!itemId || qty < 1) {
+        alert("Select item & quantity");
+        return;
+    }
+
     fetch(`/api/order/{{ order.id }}/add-item`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -182,12 +179,12 @@ function addItemToOrder() {
     .then(r => r.json())
     .then(r => {
         if (r.success) location.reload();
-        else alert(r.error || "Failed");
+        else alert(r.error || "Failed to add item");
     });
 }
 
 function removeItem(name) {
-    if (!confirm("Remove item from bill?")) return;
+    if (!confirm("Remove one item from bill?")) return;
 
     fetch(`/api/order/{{ order.id }}/remove-item`, {
         method: "POST",
@@ -197,11 +194,10 @@ function removeItem(name) {
     .then(r => r.json())
     .then(r => {
         if (r.success) location.reload();
-        else alert(r.error || "Failed");
+        else alert(r.error || "Failed to remove item");
     });
 }
 </script>
-
 
 </body>
 </html>

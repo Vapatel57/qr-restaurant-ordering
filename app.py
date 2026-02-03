@@ -3,6 +3,7 @@ from flask import (
     session, Response, send_file, jsonify,
     current_app
 )
+import uuid
 
 from db import (
     execute, fetchone, fetchall, commit, sql,
@@ -355,10 +356,12 @@ def add_item_to_order(order_id):
 
     # 4️⃣ Add item
     items.append({
-        "name": item["name"],
-        "price": price,
-        "qty": qty
+    "id": str(uuid.uuid4()),   # 🔥 UNIQUE
+    "name": item["name"],
+    "price": price,
+    "qty": qty
     })
+
 
     new_total = float(order["total"]) + (price * qty)
 
@@ -907,7 +910,7 @@ def remove_item_from_order(order_id):
     item_name = data.get("item_name")
 
     order = fetchone(sql("""
-        SELECT items, total
+        SELECT items
         FROM orders
         WHERE id=? AND restaurant_id=?
     """), (order_id, session["restaurant_id"]))
@@ -915,26 +918,25 @@ def remove_item_from_order(order_id):
     if not order:
         return jsonify({"error": "Order not found"}), 404
 
-    # ✅ SAFE PARSE
     items = order["items"]
     if isinstance(items, str):
-        items = json.loads(items)
-    elif items is None:
-        items = []
+        items = json.loads(items or "[]")
 
+    # 🔥 REMOVE ONLY ONE ITEM
+    removed = False
     new_items = []
-    removed_total = 0
 
     for i in items:
-        if i["name"] == item_name:
-            removed_total += i["price"] * i["qty"]
-        else:
-            new_items.append(i)
+        if i["name"] == item_name and not removed:
+            removed = True
+            continue
+        new_items.append(i)
 
-    if len(new_items) == len(items):
+    if not removed:
         return jsonify({"error": "Item not found"}), 400
 
-    new_total = max(0, float(order["total"]) - removed_total)
+    # 🔥 RECALCULATE TOTAL
+    new_total = sum(i["price"] * i["qty"] for i in new_items)
 
     execute(sql("""
         UPDATE orders
@@ -949,9 +951,6 @@ def remove_item_from_order(order_id):
 
     commit()
     return jsonify({"success": True})
-
-
-
 
 @app.route("/bill/<int:order_id>/thermal")
 @login_required("admin")
