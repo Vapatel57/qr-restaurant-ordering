@@ -991,17 +991,18 @@ def kitchen_orders():
     rid = session["restaurant_id"]
 
     orders = fetchall(sql("""
-        SELECT id, table_no, items, status
+        SELECT *
         FROM orders
         WHERE restaurant_id=?
         AND status != 'Served'
-        ORDER BY id DESC
+        ORDER BY created_at ASC
     """), (rid,))
 
     return jsonify([
         {k: json_safe(v) for k, v in dict(o).items()}
         for o in orders
     ])
+
 
 # --------------------------------------------------
 # ROOT
