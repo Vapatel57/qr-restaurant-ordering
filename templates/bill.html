@@ -105,6 +105,22 @@
 
     </div>
 </div>
+<script>
+function removeItem(name) {
+    if (!confirm("Remove this item from bill?")) return;
+
+    fetch(`/api/order/{{ order.id }}/remove-item`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item_name: name })
+    })
+    .then(res => res.json())
+    .then(r => {
+        if (r.success) location.reload();
+        else alert(r.error || "Failed");
+    });
+}
+</script>
 
 </body>
 </html>

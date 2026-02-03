@@ -877,6 +877,52 @@ def bill(order_id):
         address=order["restaurant_address"],
         phone=order["restaurant_phone"]
     )
+@app.route("/api/order/<int:order_id>/remove-item", methods=["POST"])
+@login_required("admin")
+def remove_item_from_order(order_id):
+    data = request.json
+    item_name = data.get("item_name")
+
+    if not item_name:
+        return jsonify({"error": "Item name required"}), 400
+
+    order = fetchone(sql("""
+        SELECT items
+        FROM orders
+        WHERE id=? AND restaurant_id=?
+    """), (order_id, session["restaurant_id"]))
+
+    if not order:
+        return jsonify({"error": "Order not found"}), 404
+
+    items = json.loads(order["items"])
+    new_items = []
+    removed = False
+
+    for i in items:
+        if i["name"] == item_name and not removed:
+            removed = True
+            continue
+        new_items.append(i)
+
+    if not removed:
+        return jsonify({"error": "Item not found"}), 404
+
+    new_total = sum(i["price"] * i["qty"] for i in new_items)
+
+    execute(sql("""
+        UPDATE orders
+        SET items=?, total=?
+        WHERE id=? AND restaurant_id=?
+    """), (
+        json.dumps(new_items),
+        new_total,
+        order_id,
+        session["restaurant_id"]
+    ))
+
+    commit()
+    return jsonify({"success": True})
 
 @app.route("/bill/<int:order_id>/thermal")
 @login_required("admin")
