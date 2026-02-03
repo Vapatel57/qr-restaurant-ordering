@@ -321,77 +321,73 @@ def admin():
 @login_required("admin")
 def add_item_to_order(order_id):
     data = request.json
-
     qty = int(data["qty"])
     item_id = data["item_id"]
 
-    # 🔹 Fetch menu item
-    item = fetchone(
-        sql("""
-            SELECT name, price
-            FROM menu
-            WHERE id=? AND restaurant_id=?
-        """),
-        (item_id, session["restaurant_id"])
-    )
+    # 1️⃣ Fetch menu item
+    item = fetchone(sql("""
+        SELECT name, price
+        FROM menu
+        WHERE id=? AND restaurant_id=?
+    """), (item_id, session["restaurant_id"]))
 
     if not item:
         return jsonify({"error": "Menu item not found"}), 404
 
-    # 🔹 Fetch order
-    order = fetchone(
-        sql("""
-            SELECT items, total, table_no
-            FROM orders
-            WHERE id=? AND restaurant_id=?
-        """),
-        (order_id, session["restaurant_id"])
-    )
+    # 🔥 FORCE Decimal → float
+    price = float(item["price"])
+
+    # 2️⃣ Fetch order
+    order = fetchone(sql("""
+        SELECT items, total, table_no
+        FROM orders
+        WHERE id=? AND restaurant_id=?
+    """), (order_id, session["restaurant_id"]))
 
     if not order:
         return jsonify({"error": "Order not found"}), 404
 
-    items = (
-    order["items"]
-    if isinstance(order["items"], list)
-    else json.loads(order["items"])
-)
+    # 3️⃣ Parse items safely
+    items = order["items"]
+    if isinstance(items, str):
+        items = json.loads(items)
+    elif items is None:
+        items = []
 
-
-    # 🔹 Add item to order (billing)
+    # 4️⃣ Append new item (NO Decimal)
     items.append({
         "name": item["name"],
-        "price": item["price"],
+        "price": price,
         "qty": qty
     })
 
-    new_total = order["total"] + (item["price"] * qty)
+    new_total = float(order["total"]) + (price * qty)
 
-    execute(
-        sql("""
-            UPDATE orders
-            SET items=?, total=?
-            WHERE id=? AND restaurant_id=?
-        """),
-        (json.dumps(items), new_total, order_id, session["restaurant_id"])
-    )
+    # 5️⃣ Update order
+    execute(sql("""
+        UPDATE orders
+        SET items=?, total=?
+        WHERE id=? AND restaurant_id=?
+    """), (
+        json.dumps(items),
+        new_total,
+        order_id,
+        session["restaurant_id"]
+    ))
 
-    # 🔥 Insert into order_additions (kitchen stream)
-    execute(
-        sql("""
-            INSERT INTO order_additions
-            (order_id, restaurant_id, table_no, item_name, qty, price, status, created_at)
-            VALUES (?,?,?,?,?,?,'New',CURRENT_TIMESTAMP)
-        """),
-        (
-            order_id,
-            session["restaurant_id"],
-            order["table_no"],
-            item["name"],
-            qty,
-            item["price"]
-        )
-    )
+    # 6️⃣ Insert kitchen addition
+    execute(sql("""
+        INSERT INTO order_additions
+        (order_id, restaurant_id, table_no, item_name, qty, price, status, created_at)
+        VALUES (?,?,?,?,?,?,'New',CURRENT_TIMESTAMP)
+    """), (
+        order_id,
+        session["restaurant_id"],
+        order["table_no"],
+        item["name"],
+        qty,
+        price
+    ))
 
     commit()
     return jsonify({"success": True})
