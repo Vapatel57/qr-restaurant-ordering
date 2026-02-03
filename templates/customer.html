@@ -159,8 +159,14 @@ function renderMenu(items) {
     items.forEach(item => {
         menuEl.innerHTML += `
             <div class="bg-white p-3 rounded-2xl shadow-sm flex gap-4 border">
-                <img src="/${item.image || 'static/no-image.png'}"
-                     class="w-24 h-24 rounded-xl object-cover">
+                <img
+                    src="${
+                        item.image
+                        ? (item.image.startsWith('http') ? item.image : '/' + item.image)
+                        : '/static/no-image.png'
+                    }"
+                    class="w-24 h-24 rounded-xl object-cover">
+
 
                 <div class="flex-1 flex flex-col justify-between">
                     <div>

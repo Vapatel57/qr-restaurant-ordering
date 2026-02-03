@@ -21,12 +21,20 @@ from flask_dance.contrib.google import make_google_blueprint
 from werkzeug.security import generate_password_hash, check_password_hash
 from menu_templates import MENU_TEMPLATES
 from decimal import Decimal
-
+from decimal import Decimal
 def serialize_row(row):
     return {
         k: float(v) if isinstance(v, Decimal) else v
         for k, v in dict(row).items()
     }
+
+
+def json_safe(obj):
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    if isinstance(obj, Decimal):
+        return float(obj)
+    return obj
 
 # --------------------------------------------------
 # CONFIG
@@ -913,9 +921,13 @@ def events():
                 )
 
                 payload = {
-                    "orders": [serialize_row(o) for o in orders],
-                    "today_revenue": float(revenue_row["revenue"])
+                    "orders": [
+                        {k: json_safe(v) for k, v in dict(o).items()}
+                        for o in orders
+                        ],
+                        "today_revenue": float(revenue_row["revenue"] or 0)
                 }
+
 
                 yield f"data:{json.dumps(payload)}\n\n"
                 time.sleep(2)
@@ -941,7 +953,11 @@ def addition_events():
                     (rid,)
                 )
 
-                yield f"data:{json.dumps([dict(a) for a in additions])}\n\n"
+                yield f"data:{json.dumps([
+                    {k: json_safe(v) for k, v in dict(a).items()}
+                    for a in additions
+                ])}\n\n"
+
                 time.sleep(2)
 
     return Response(stream(), mimetype="text/event-stream")
