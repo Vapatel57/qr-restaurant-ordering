@@ -78,11 +78,16 @@ os.makedirs(QR_FOLDER, exist_ok=True)
 google_bp = make_google_blueprint(
     client_id=os.getenv("GOOGLE_CLIENT_ID"),
     client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
-    scope=["profile", "email"],
-    redirect_url="/login/google"
+    scope=[
+        "openid",
+        "https://www.googleapis.com/auth/userinfo.email",
+        "https://www.googleapis.com/auth/userinfo.profile"
+    ],
+    redirect_url="/login/google/authorized"
 )
 
 app.register_blueprint(google_bp, url_prefix="/login")
+
 
 # --------------------------------------------------
 # AUTH
