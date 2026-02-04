@@ -60,7 +60,8 @@ cloudinary.config(
     secure=True
 )
 
-app.secret_key = "saas_qr_restaurant_secret"
+app.secret_key = os.getenv("SECRET_KEY", "dev-secret")
+
 
 init_db()
 app.teardown_appcontext(close_db)
@@ -75,9 +76,12 @@ os.makedirs(QR_FOLDER, exist_ok=True)
 # --------------------------------------------------
 
 google_bp = make_google_blueprint(
-    client_id="YOUR_GOOGLE_CLIENT_ID",
-    client_secret="YOUR_GOOGLE_CLIENT_SECRET",
-    scope=["profile", "email"]
+    client_id=os.getenv("GOOGLE_CLIENT_ID"),
+    client_secret=os.getenv("GOOGLE_CLIENT_SECRET"),
+    scope=["profile", "email"],
+    redirect_url="/login/google"
+)
+
 )
 app.register_blueprint(google_bp, url_prefix="/login")
 
@@ -162,28 +166,22 @@ def signup():
         email = request.form["email"].strip().lower()
         subdomain = request.form["subdomain"].strip().lower()
 
-        # 🔴 CHECK EMAIL
-        if fetchone(
-            sql("SELECT id FROM users WHERE username=?"),
-            (email,)
-        ):
+        # ❌ email exists
+        if fetchone(sql("SELECT id FROM users WHERE username=?"), (email,)):
             return render_template(
                 "signup.html",
                 error="This email is already registered. Please login."
             )
 
-        # 🔴 CHECK SUBDOMAIN
-        if fetchone(
-            sql("SELECT id FROM restaurants WHERE subdomain=?"),
-            (subdomain,)
-        ):
+        # ❌ subdomain exists
+        if fetchone(sql("SELECT id FROM restaurants WHERE subdomain=?"), (subdomain,)):
             return render_template(
                 "signup.html",
                 error="This subdomain is already taken."
             )
 
         try:
-            # ✅ CREATE RESTAURANT
+            # 1️⃣ Create restaurant
             cursor = execute(sql("""
                 INSERT INTO restaurants (name, subdomain, gstin, phone, address)
                 VALUES (?, ?, ?, ?, ?)
@@ -196,40 +194,36 @@ def signup():
                 request.form.get("address")
             ))
 
-            # ✅ GET RESTAURANT ID
-            if os.getenv("DB_TYPE") == "postgres":
-                restaurant_id = cursor.fetchone()["id"]
-            else:
-                restaurant_id = cursor.lastrowid
+            restaurant_id = cursor.fetchone()["id"]
 
-            # ✅ CREATE ADMIN USER (UNVERIFIED)
+            # 2️⃣ Create admin with OTP
+            otp = generate_otp()
             hashed_pw = generate_password_hash(request.form["password"])
 
             execute(sql("""
-                INSERT INTO users (restaurant_id, username, password, role)
-                VALUES (?, ?, ?, 'admin')
+                INSERT INTO users (
+                    restaurant_id,
+                    username,
+                    password,
+                    role,
+                    is_verified,
+                    otp_code,
+                    otp_expires_at
+                )
+                VALUES (?, ?, ?, 'admin', FALSE, ?, NOW() + INTERVAL '10 minutes')
             """), (
                 restaurant_id,
                 email,
-                hashed_pw
+                hashed_pw,
+                otp
             ))
-
-
-            # 🔐 GENERATE & SAVE OTP
-            otp = generate_otp()
-
-            execute(sql("""
-                UPDATE users
-                SET otp_code=?, otp_expires_at=NOW() + INTERVAL '10 minutes'
-                WHERE username=?
-            """), (otp, email))
 
             commit()
 
-            # 📧 SEND OTP EMAIL
+            # 3️⃣ Send OTP
             send_otp_email(email, otp)
 
-            # 🧠 STORE TEMP SESSION
+            # 4️⃣ Temp session
             session.clear()
             session["pending_email"] = email
 
@@ -238,9 +232,8 @@ def signup():
         except Exception as e:
             current_app.logger.exception(e)
 
-            if os.getenv("DB_TYPE", "sqlite") == "sqlite":
-                db = get_db()
-                db.rollback()
+            if os.getenv("DB_TYPE") == "sqlite":
+                get_db().rollback()
 
             return render_template(
                 "signup.html",
