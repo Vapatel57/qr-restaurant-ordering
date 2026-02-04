@@ -303,7 +303,9 @@ def place_order():
 
     new_total = sum(i["price"] * i["qty"] for i in new_items)
 
+    # ===============================
     # ✅ CASE 1: APPEND TO EXISTING ORDER
+    # ===============================
     if existing:
         old_items = (
             existing["items"]
@@ -314,6 +316,7 @@ def place_order():
         combined_items = old_items + new_items
         updated_total = float(existing["total"]) + new_total
 
+        # ✅ Update order
         execute(sql("""
             UPDATE orders
             SET items=?, total=?
@@ -324,10 +327,27 @@ def place_order():
             existing["id"]
         ))
 
+        # 🔥 Send ONLY new items to kitchen
+        for i in new_items:
+            execute(sql("""
+                INSERT INTO order_additions
+                (order_id, restaurant_id, table_no, item_name, qty, price, status, created_at)
+                VALUES (?,?,?,?,?,?,'New',CURRENT_TIMESTAMP)
+            """), (
+                existing["id"],
+                restaurant_id,
+                table_no,
+                i["name"],
+                i["qty"],
+                i["price"]
+            ))
+
         commit()
         return jsonify({"success": True, "order_id": existing["id"]})
 
+    # ===============================
     # ✅ CASE 2: CREATE NEW ORDER
+    # ===============================
     execute(sql("""
         INSERT INTO orders
         (restaurant_id, table_no, customer_name, items, total, status, created_at)
@@ -342,6 +362,7 @@ def place_order():
 
     commit()
     return jsonify({"success": True})
+
 
 @app.route("/api/order/<int:order_id>/close", methods=["POST"])
 @login_required("admin")

@@ -2,9 +2,20 @@ const ordersContainer = document.getElementById("orders-container");
 const additionsContainer = document.getElementById("additions");
 const pendingCount = document.getElementById("pending-count");
 
+const lastAdditionIds = new Set();
 const updatingOrders = new Set();
 
-/* ================= RENDER ORDERS ================= */
+/* ================= SOUND ================= */
+
+function playSound() {
+    const sound = document.getElementById("orderSound");
+    if (sound) {
+        sound.currentTime = 0;
+        sound.play().catch(() => {});
+    }
+}
+
+/* ================= ORDERS ================= */
 
 function renderOrders(orders) {
     ordersContainer.innerHTML = "";
@@ -59,23 +70,59 @@ function renderOrders(orders) {
     });
 }
 
-/* ================= LOAD ORDERS ================= */
-
 function loadKitchenOrders() {
     fetch("/api/kitchen/orders")
-        .then(res => {
-            if (!res.ok) throw new Error("Failed to load orders");
-            return res.json();
-        })
+        .then(res => res.json())
         .then(renderOrders)
         .catch(err => console.error("Kitchen orders error:", err));
 }
 
-/* ================= UPDATE ORDER STATUS ================= */
+/* ================= ADDITIONS (WITH SOUND) ================= */
+
+function renderAdditions(additions) {
+    if (!additions.length) {
+        additionsContainer.innerHTML =
+            `<p class="text-gray-400">No new additions</p>`;
+        return;
+    }
+
+    additionsContainer.innerHTML = additions.map(a => `
+        <div class="bg-red-600 text-white p-4 rounded-lg mb-3">
+            <h3 class="font-black">TABLE ${a.table_no}</h3>
+            <p>${a.qty} × ${a.item_name}</p>
+            <button
+                onclick="markAdditionDone(${a.id})"
+                class="mt-3 bg-black px-4 py-2 rounded">
+                Mark Preparing
+            </button>
+        </div>
+    `).join("");
+}
+
+function loadKitchenAdditions() {
+    fetch("/api/kitchen/additions")
+        .then(res => res.json())
+        .then(additions => {
+            let hasNew = false;
+
+            additions.forEach(a => {
+                if (!lastAdditionIds.has(a.id)) {
+                    lastAdditionIds.add(a.id);
+                    hasNew = true;
+                }
+            });
+
+            if (hasNew) playSound();
+
+            renderAdditions(additions);
+        })
+        .catch(err => console.error("Kitchen additions error:", err));
+}
+
+/* ================= UPDATE STATUS ================= */
 
 async function updateStatus(orderId, status) {
     if (updatingOrders.has(orderId)) return;
-
     updatingOrders.add(orderId);
 
     try {
@@ -85,51 +132,21 @@ async function updateStatus(orderId, status) {
             body: JSON.stringify({ status })
         });
 
-        if (!res.ok) throw new Error("Status update failed");
+        if (!res.ok) throw new Error();
 
-        loadKitchenOrders();   // 🔥 refresh orders
-    } catch (err) {
-        console.error(err);
+        loadKitchenOrders();
+    } catch {
         alert("Failed to update order status");
     } finally {
         updatingOrders.delete(orderId);
     }
 }
 
-/* ================= LOAD ADDITIONS ================= */
-
-function loadAdditions() {
-    fetch("/api/kitchen/additions")
-        .then(res => res.json())
-        .then(additions => {
-            if (!additions.length) {
-                additionsContainer.innerHTML =
-                    `<p class="text-gray-400">No new additions</p>`;
-                return;
-            }
-
-            additionsContainer.innerHTML = additions.map(a => `
-                <div class="bg-red-600 text-white p-4 rounded-lg mb-3">
-                    <h3 class="font-black">TABLE ${a.table_no}</h3>
-                    <p>${a.qty} × ${a.item_name}</p>
-                    <button
-                        onclick="markAdditionDone(${a.id})"
-                        class="mt-3 bg-black px-4 py-2 rounded">
-                        Mark Preparing
-                    </button>
-                </div>
-            `).join("");
-        })
-        .catch(err => console.error("Additions error:", err));
-}
-
-/* ================= UPDATE ADDITION STATUS ================= */
-
 function markAdditionDone(id) {
     fetch(`/api/kitchen/addition/${id}/status`, { method: "POST" })
         .then(() => {
-            loadAdditions();      // 🔥 remove from additions
-            loadKitchenOrders();  // 🔥 reflect updated items
+            loadKitchenAdditions();
+            loadKitchenOrders();
         })
         .catch(() => alert("Failed to update addition"));
 }
@@ -137,7 +154,7 @@ function markAdditionDone(id) {
 /* ================= INIT ================= */
 
 loadKitchenOrders();
-loadAdditions();
+loadKitchenAdditions();
 
 setInterval(loadKitchenOrders, 3000);
-setInterval(loadAdditions, 3000);
+setInterval(loadKitchenAdditions, 3000);
