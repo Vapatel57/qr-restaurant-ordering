@@ -77,11 +77,6 @@ function renderOrders(orders) {
                 </td>
 
                 <td class="p-4 flex gap-2">
-    <a href="/bill/${o.id}"
-       class="bg-emerald-600 text-white px-3 py-1 rounded text-sm">
-        Bill
-    </a>
-
     <button
         onclick="openEditBill(${o.id})"
         class="bg-blue-600 text-white px-3 py-1 rounded text-sm">
@@ -95,6 +90,7 @@ function renderOrders(orders) {
         Generate Bill & Close
     </button>` : ""}
 </td>
+
 
             </tr>
         `;

@@ -539,7 +539,7 @@ def orders_by_date():
         SELECT COALESCE(SUM(total), 0) AS revenue
         FROM orders
         WHERE restaurant_id=?
-        AND status='Served'
+        AND status='Closed'
         AND DATE(created_at)=?
     """), (rid, date))
 
@@ -874,18 +874,6 @@ def edit_order(order_id):
         gst=gst,
         total=total
     )
-@app.route("/api/order/<int:order_id>/generate-close", methods=["POST"])
-@login_required("admin")
-def generate_and_close(order_id):
-    execute(sql("""
-        UPDATE orders
-        SET status='Closed'
-        WHERE id=? AND restaurant_id=?
-    """), (order_id, session["restaurant_id"]))
-
-    commit()
-    return jsonify({"success": True})
-
 
 @app.route("/bill/<int:order_id>")
 @login_required("admin")
@@ -909,54 +897,56 @@ def bill(order_id):
     if not order:
         return "Order not found", 404
 
+    # ✅ AUTO CLOSE ORDER WHEN BILL IS GENERATED
+    if order["status"] != "Closed":
+        execute(sql("""
+            UPDATE orders
+            SET status='Closed'
+            WHERE id=? AND restaurant_id=?
+        """), (order_id, session["restaurant_id"]))
+        commit()
+
+        # refresh order after update
+        order = fetchone(
+            sql("""
+                SELECT 
+                    o.*,
+                    r.name AS restaurant_name,
+                    r.gstin AS restaurant_gstin,
+                    r.address AS restaurant_address,
+                    r.phone AS restaurant_phone
+                FROM orders o
+                JOIN restaurants r ON o.restaurant_id = r.id
+                WHERE o.id=? AND o.restaurant_id=?
+            """),
+            (order_id, session["restaurant_id"])
+        )
+
+    # ✅ SAFE PARSE ITEMS
     raw_items = (
-    order["items"]
-    if isinstance(order["items"], list)
-    else json.loads(order["items"])
-)
+        order["items"]
+        if isinstance(order["items"], list)
+        else json.loads(order["items"] or "[]")
+    )
 
+    # ✅ GROUP SAME ITEMS
     grouped = {}
-
     for i in raw_items:
         key = i["name"]
         if key not in grouped:
             grouped[key] = {
                 "name": i["name"],
-                "price": i["price"],
+                "price": float(i["price"]),
                 "qty": 0
             }
-        grouped[key]["qty"] += i["qty"]
+        grouped[key]["qty"] += int(i["qty"])
 
     items = list(grouped.values())
 
-
+    # ✅ TOTALS
     subtotal = sum(i["price"] * i["qty"] for i in items)
     gst = round(subtotal * 0.05, 2)
     total = round(subtotal + gst, 2)
-
-    # PDF download
-    if request.args.get("pdf"):
-        filename = f"bill_{order_id}.pdf"
-        c = canvas.Canvas(filename)
-
-        c.drawString(100, 780, order["restaurant_name"])
-        c.drawString(100, 760, f"Table: {order['table_no']}")
-
-        if order["customer_name"]:
-            c.drawString(100, 740, f"Customer: {order['customer_name']}")
-
-        y = 720
-        for i in items:
-            c.drawString(
-                100, y,
-                f"{i['name']} x {i['qty']} = ₹{i['price'] * i['qty']}"
-            )
-            y -= 20
-
-        c.drawString(100, y - 20, f"Total: ₹{total}")
-        c.save()
-
-        return send_file(filename, as_attachment=True)
 
     return render_template(
         "bill.html",
@@ -970,6 +960,7 @@ def bill(order_id):
         address=order["restaurant_address"],
         phone=order["restaurant_phone"]
     )
+
 @app.route("/api/order/<int:order_id>/remove-item", methods=["POST"])
 @login_required("admin")
 def remove_item_from_order(order_id):
@@ -1156,7 +1147,7 @@ def kitchen_orders():
         SELECT *
         FROM orders
         WHERE restaurant_id=?
-        AND status != 'Served'
+        AND status NOT IN ('Served', 'Closed')
         ORDER BY created_at ASC
     """), (rid,))
 
