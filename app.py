@@ -82,12 +82,11 @@ google_bp = make_google_blueprint(
         "openid",
         "https://www.googleapis.com/auth/userinfo.email",
         "https://www.googleapis.com/auth/userinfo.profile"
-    ],
-    redirect_url="/login/google/authorized"
+    ]
 )
 
 app.register_blueprint(google_bp, url_prefix="/login")
-
+google_bp.redirect_url = "/google/after-login"
 
 # --------------------------------------------------
 # AUTH
@@ -226,31 +225,29 @@ def signup():
         return redirect("/verify-email")
 
     return render_template("signup.html")
-@app.route("/google/callback")
-def google_callback():
+
+
+@app.route("/google/after-login")
+def google_after_login():
     if not google.authorized:
         return redirect("/login")
 
     resp = google.get("/oauth2/v2/userinfo")
     if not resp.ok:
-        current_app.logger.error("Google userinfo failed")
         return redirect("/login")
 
     info = resp.json()
-    email = info.get("email", "").lower()
+    email = info["email"].lower()
     name = info.get("name", "")
     google_id = info.get("id")
 
-    if not email:
-        return redirect("/login")
-
-    # 🔍 Check existing user
+    # 🔍 Check user
     user = fetchone(
         sql("SELECT * FROM users WHERE username=?"),
         (email,)
     )
 
-    # ✅ EXISTING USER → LOGIN
+    # ✅ EXISTING USER
     if user:
         session.clear()
         session["user"] = user["username"]
@@ -258,16 +255,16 @@ def google_callback():
         session["restaurant_id"] = user["restaurant_id"]
         return redirect("/admin")
 
-    # 🆕 NEW GOOGLE USER → TEMP USER (NO RESTAURANT)
-    cursor = execute(
-        sql("""
-            INSERT INTO users
-            (username, password, role, is_verified, auth_provider)
-            VALUES (?, ?, 'admin', TRUE, 'google')
-            RETURNING id
-        """),
-        (email, generate_password_hash(google_id))
-    )
+    # 🆕 NEW GOOGLE USER → onboarding
+    cursor = execute(sql("""
+        INSERT INTO users
+        (username, password, role, is_verified, auth_provider)
+        VALUES (?, ?, 'admin', TRUE, 'google')
+        RETURNING id
+    """), (
+        email,
+        generate_password_hash(google_id)
+    ))
 
     user_id = cursor.fetchone()["id"]
     commit()
