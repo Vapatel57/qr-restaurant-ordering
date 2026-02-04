@@ -1,7 +1,7 @@
 const ordersContainer = document.getElementById("orders-container");
 const additionsContainer = document.getElementById("additions");
 const pendingCount = document.getElementById("pending-count");
-
+const lastOrderIds = new Set();
 const lastAdditionIds = new Set();
 const updatingOrders = new Set();
 
@@ -73,9 +73,25 @@ function renderOrders(orders) {
 function loadKitchenOrders() {
     fetch("/api/kitchen/orders")
         .then(res => res.json())
-        .then(renderOrders)
+        .then(orders => {
+            let hasNewOrder = false;
+
+            orders.forEach(o => {
+                if (!lastOrderIds.has(o.id)) {
+                    lastOrderIds.add(o.id);
+                    hasNewOrder = true;
+                }
+            });
+
+            if (hasNewOrder && orders.length > 0) {
+                playSound(); // 🔔 NEW ORDER ALERT
+            }
+
+            renderOrders(orders);
+        })
         .catch(err => console.error("Kitchen orders error:", err));
 }
+
 
 /* ================= ADDITIONS (WITH SOUND) ================= */
 
