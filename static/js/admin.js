@@ -70,46 +70,50 @@ function renderOrders(orders) {
     }
 
     orders.forEach(o => {
-        if (o.status !== "Closed") pending++;
-        if (o.status === "Closed") revenue += Number(o.total || 0);
+    const status = (o.status || "").toLowerCase().trim();
+    const isClosed = status === "closed";
 
-        const itemsArr = Array.isArray(o.items)
-            ? o.items
-            : JSON.parse(o.items || "[]");
+    if (!isClosed) pending++;
+    if (isClosed) revenue += Number(o.total || 0);
 
-        const itemsText = itemsArr.length
-            ? itemsArr.map(i => `${i.qty}× ${i.name}`).join(", ")
-            : "<span class='text-gray-400'>No items</span>";
+    tableBody.innerHTML += `
+        <tr class="border-b hover:bg-gray-50">
+            <td class="p-4 font-bold">Table ${o.table_no}</td>
 
-        tableBody.innerHTML += `
-            <tr class="border-b hover:bg-gray-50">
-                <td class="p-4 font-bold">Table ${o.table_no}</td>
+            <td class="p-4 text-sm">${itemsText}</td>
 
-                <td class="p-4 text-sm">${itemsText}</td>
+            <td class="p-4 font-semibold">₹${o.total}</td>
 
-                <td class="p-4 font-semibold">₹${o.total}</td>
+            <td class="p-4">
+                <span class="badge">${o.status}</span>
+            </td>
 
-                <td class="p-4">
-                    <span class="badge">${o.status}</span>
-                </td>
+            <td class="p-4 flex gap-2">
+                ${
+                    !isClosed
+                    ? `
+                    <button
+                        onclick="openEditBill(${o.id})"
+                        class="bg-blue-600 text-white px-3 py-1 rounded text-sm">
+                        Edit
+                    </button>
 
-                <td class="p-4 flex gap-2">
-    <button
-        onclick="openEditBill(${o.id})"
-        class="bg-blue-600 text-white px-3 py-1 rounded text-sm">
-        Edit
-    </button>
-
-    ${o.status !== "Closed" ? `
-    <button
-        onclick="generateBillAndClose({{ o.id }})"
-        class="bg-red-600 text-white px-3 py-1 rounded text-sm">
-        Generate Bill & Close
-        </button>` : ""}
-</td>
-            </tr>
-        `;
-    });
+                    <button
+                        onclick="generateBillAndClose(${o.id})"
+                        class="bg-red-600 text-white px-3 py-1 rounded text-sm">
+                        Generate Bill & Close
+                    </button>
+                    `
+                    : `
+                    <span class="text-gray-400 font-semibold text-sm">
+                        Closed
+                    </span>
+                    `
+                }
+            </td>
+        </tr>
+    `;
+});
 
     pendingCount.innerText = pending;
     revenueEl.innerText = `₹${revenue}`;
