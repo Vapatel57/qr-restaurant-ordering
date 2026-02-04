@@ -352,7 +352,7 @@ def verify_email():
         """), (email, code))
 
         if not user:
-            return render_template("verify.html", error="Invalid or expired OTP")
+            return render_template("verify_email.html", error="Invalid or expired OTP")
 
         execute(sql("""
             UPDATE users
