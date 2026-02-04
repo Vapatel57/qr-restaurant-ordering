@@ -165,14 +165,14 @@ def signup():
         email = request.form["email"].strip().lower()
         subdomain = request.form["subdomain"].strip().lower()
 
-        # ❌ email exists
+        # ❌ Email exists
         if fetchone(sql("SELECT id FROM users WHERE username=?"), (email,)):
             return render_template(
                 "signup.html",
                 error="This email is already registered. Please login."
             )
 
-        # ❌ subdomain exists
+        # ❌ Subdomain exists
         if fetchone(sql("SELECT id FROM restaurants WHERE subdomain=?"), (subdomain,)):
             return render_template(
                 "signup.html",
@@ -195,7 +195,7 @@ def signup():
 
             restaurant_id = cursor.fetchone()["id"]
 
-            # 2️⃣ Create admin with OTP
+            # 2️⃣ Create admin user with OTP
             otp = generate_otp()
             hashed_pw = generate_password_hash(request.form["password"])
 
@@ -219,15 +219,6 @@ def signup():
 
             commit()
 
-            # 3️⃣ Send OTP
-            send_otp_email(email, otp)
-
-            # 4️⃣ Temp session
-            session.clear()
-            session["pending_email"] = email
-
-            return redirect("/verify-email")
-
         except Exception as e:
             current_app.logger.exception(e)
 
@@ -236,10 +227,22 @@ def signup():
 
             return render_template(
                 "signup.html",
-                error="Something went wrong. Please try again."
+                error="Something went wrong while creating account."
             )
 
+        # 3️⃣ Send OTP (non-blocking)
+        try:
+            send_otp_email(email, otp)
+        except Exception as e:
+            current_app.logger.exception(e)
+
+        # 4️⃣ Redirect to verify page (ALWAYS)
+        session.clear()
+        session["pending_email"] = email
+        return redirect("/verify-email")
+
     return render_template("signup.html")
+
 
 
 @app.route("/login/google")
@@ -1344,12 +1347,10 @@ def home():
 
 # --------------------------------------------------
 
+# if __name__ == "__main__":
+#     app.run()
+
+
 if __name__ == "__main__":
-    app.run()
-
-# if __name__ == "__main__":
-#     app.run(debug=True)
-# if __name__ == "__main__":
-#     app.run(host="0.0.0.0", port=5000)
-
+    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))
 
