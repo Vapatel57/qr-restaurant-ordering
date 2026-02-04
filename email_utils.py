@@ -1,20 +1,23 @@
-import smtplib
-import socket
 import os
-from email.message import EmailMessage
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
-socket.setdefaulttimeout(5)  # 🔥 VERY IMPORTANT
+def send_otp_email(email, otp):
+    message = Mail(
+        from_email=os.getenv("FROM_EMAIL"),
+        to_emails=email,
+        subject="Verify your email",
+        html_content=f"""
+        <h2>Email Verification</h2>
+        <p>Your OTP is:</p>
+        <h1>{otp}</h1>
+        <p>This OTP is valid for 10 minutes.</p>
+        """
+    )
 
-def send_otp_email(to_email, otp):
-    msg = EmailMessage()
-    msg["Subject"] = "Your OTP Verification Code"
-    msg["From"] = os.getenv("SMTP_EMAIL")
-    msg["To"] = to_email
-    msg.set_content(f"Your OTP is: {otp}")
-
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=5) as server:
-        server.login(
-            os.getenv("SMTP_EMAIL"),
-            os.getenv("SMTP_PASSWORD")
-        )
-        server.send_message(msg)
+    try:
+        sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
+        sg.send(message)
+    except Exception as e:
+        # IMPORTANT: don't crash signup
+        print("SendGrid error:", e)

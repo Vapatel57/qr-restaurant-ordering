@@ -165,58 +165,15 @@ def signup():
         email = request.form["email"].strip().lower()
         subdomain = request.form["subdomain"].strip().lower()
 
-        # --------------------------------------------------
-        # 1️⃣ CHECK EXISTING USER
-        # --------------------------------------------------
-        existing_user = fetchone(
-            sql("SELECT id, is_verified FROM users WHERE username=?"),
-            (email,)
-        )
+        if fetchone(sql("SELECT id FROM users WHERE username=?"), (email,)):
+            return render_template("signup.html", error="Email already registered.")
 
-        if existing_user:
-            if existing_user["is_verified"]:
-                return render_template(
-                    "signup.html",
-                    error="This email is already registered. Please login."
-                )
-            else:
-                # 🔁 User exists but NOT verified → resend OTP
-                otp = generate_otp()
-
-                execute(sql("""
-                    UPDATE users
-                    SET otp_code=?,
-                        otp_expires_at=NOW() + INTERVAL '10 minutes'
-                    WHERE username=?
-                """), (otp, email))
-
-                commit()
-
-                try:
-                    send_otp_email(email, otp)
-                except Exception as e:
-                    current_app.logger.exception(e)
-
-                session.clear()
-                session["pending_email"] = email
-                return redirect("/verify-email")
-
-        # --------------------------------------------------
-        # 2️⃣ CHECK SUBDOMAIN
-        # --------------------------------------------------
-        if fetchone(
-            sql("SELECT id FROM restaurants WHERE subdomain=?"),
-            (subdomain,)
-        ):
-            return render_template(
-                "signup.html",
-                error="This subdomain is already taken."
-            )
+        if fetchone(sql("SELECT id FROM restaurants WHERE subdomain=?"), (subdomain,)):
+            return render_template("signup.html", error="Subdomain already taken.")
 
         try:
-            # --------------------------------------------------
-            # 3️⃣ CREATE RESTAURANT
-            # --------------------------------------------------
+            otp = generate_otp()
+
             cursor = execute(sql("""
                 INSERT INTO restaurants (name, subdomain, gstin, phone, address)
                 VALUES (?, ?, ?, ?, ?)
@@ -230,12 +187,6 @@ def signup():
             ))
 
             restaurant_id = cursor.fetchone()["id"]
-
-            # --------------------------------------------------
-            # 4️⃣ CREATE USER WITH OTP (UNVERIFIED)
-            # --------------------------------------------------
-            otp = generate_otp()
-            hashed_pw = generate_password_hash(request.form["password"])
 
             execute(sql("""
                 INSERT INTO users (
@@ -251,40 +202,26 @@ def signup():
             """), (
                 restaurant_id,
                 email,
-                hashed_pw,
+                generate_password_hash(request.form["password"]),
                 otp
             ))
 
             commit()
 
-            # --------------------------------------------------
-            # 5️⃣ SEND OTP
-            # --------------------------------------------------
-            try:
-                send_otp_email(email, otp)
-            except Exception as e:
-                current_app.logger.exception(e)
-
-            # --------------------------------------------------
-            # 6️⃣ TEMP SESSION → VERIFY PAGE
-            # --------------------------------------------------
-            session.clear()
-            session["pending_email"] = email
-
-            return redirect("/verify-email")
-
         except Exception as e:
             current_app.logger.exception(e)
+            get_db().rollback()
+            return render_template("signup.html", error="Signup failed.")
 
-            if os.getenv("DB_TYPE") == "sqlite":
-                get_db().rollback()
+        # 🔥 Send OTP safely
+        send_otp_email(email, otp)
 
-            return render_template(
-                "signup.html",
-                error="Something went wrong. Please try again."
-            )
+        session.clear()
+        session["pending_email"] = email
+        return redirect("/verify-email")
 
     return render_template("signup.html")
+
 
 
 @app.route("/login/google")
@@ -419,7 +356,7 @@ def verify_email():
             "/admin" if user["role"] == "admin" else "/kitchen"
         )
 
-    return render_template("verify.html")
+    return render_template("verify_email.html")
 
 @app.route("/logout")
 def logout():
