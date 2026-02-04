@@ -226,6 +226,56 @@ def signup():
 
     return render_template("signup.html")
 
+@app.route("/onboarding", methods=["GET", "POST"])
+def onboarding():
+    user_id = session.get("pending_google_user")
+    email = session.get("pending_email")
+
+    if not user_id or not email:
+        return redirect("/login")
+
+    if request.method == "POST":
+        subdomain = request.form["subdomain"].strip().lower()
+
+        if fetchone(
+            sql("SELECT id FROM restaurants WHERE subdomain=?"),
+            (subdomain,)
+        ):
+            return render_template(
+                "onboarding.html",
+                email=email,
+                error="Subdomain already taken"
+            )
+
+        cursor = execute(sql("""
+            INSERT INTO restaurants (name, subdomain, phone, address)
+            VALUES (?, ?, ?, ?)
+            RETURNING id
+        """), (
+            request.form["restaurant_name"],
+            subdomain,
+            request.form.get("phone"),
+            request.form.get("address")
+        ))
+
+        restaurant_id = cursor.fetchone()["id"]
+
+        execute(sql("""
+            UPDATE users
+            SET restaurant_id=?
+            WHERE id=?
+        """), (restaurant_id, user_id))
+
+        commit()
+
+        session.clear()
+        session["user"] = email
+        session["role"] = "admin"
+        session["restaurant_id"] = restaurant_id
+
+        return redirect("/admin")
+
+    return render_template("onboarding.html", email=email)
 
 @app.route("/google/after-login")
 def google_after_login():
@@ -241,7 +291,6 @@ def google_after_login():
     name = info.get("name", "")
     google_id = info.get("id")
 
-    # 🔍 Check user
     user = fetchone(
         sql("SELECT * FROM users WHERE username=?"),
         (email,)
@@ -252,10 +301,18 @@ def google_after_login():
         session.clear()
         session["user"] = user["username"]
         session["role"] = user["role"]
+
+        # 🚨 IMPORTANT: restaurant missing → onboarding
+        if not user["restaurant_id"]:
+            session["pending_google_user"] = user["id"]
+            session["pending_email"] = email
+            session["pending_name"] = name
+            return redirect("/onboarding")
+
         session["restaurant_id"] = user["restaurant_id"]
         return redirect("/admin")
 
-    # 🆕 NEW GOOGLE USER → onboarding
+    # 🆕 BRAND NEW GOOGLE USER
     cursor = execute(sql("""
         INSERT INTO users
         (username, password, role, is_verified, auth_provider)
