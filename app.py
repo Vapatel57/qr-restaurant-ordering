@@ -282,32 +282,67 @@ def customer(restaurant):
 @app.route("/order", methods=["POST"])
 def place_order():
     data = request.get_json()
+    restaurant_id = data["restaurant_id"]
+    table_no = data["table"]
     items = data["items"]
 
-    clean_items = []
-    for i in items:
-        clean_items.append({
-            "name": i["name"],
-            "price": float(i["price"]),
-            "qty": int(i["qty"])
-        })
+    # 🔎 Find existing OPEN order for table
+    existing = fetchone(sql("""
+        SELECT id, items, total
+        FROM orders
+        WHERE restaurant_id=? AND table_no=? AND status!='Closed'
+        ORDER BY id DESC
+        LIMIT 1
+    """), (restaurant_id, table_no))
 
-    total = sum(i["price"] * i["qty"] for i in clean_items)
+    new_items = [{
+        "name": i["name"],
+        "price": float(i["price"]),
+        "qty": int(i["qty"])
+    } for i in items]
 
+    new_total = sum(i["price"] * i["qty"] for i in new_items)
+
+    # ✅ CASE 1: APPEND TO EXISTING ORDER
+    if existing:
+        old_items = (
+            existing["items"]
+            if isinstance(existing["items"], list)
+            else json.loads(existing["items"] or "[]")
+        )
+
+        combined_items = old_items + new_items
+        updated_total = float(existing["total"]) + new_total
+
+        execute(sql("""
+            UPDATE orders
+            SET items=?, total=?
+            WHERE id=?
+        """), (
+            json.dumps(combined_items),
+            updated_total,
+            existing["id"]
+        ))
+
+        commit()
+        return jsonify({"success": True, "order_id": existing["id"]})
+
+    # ✅ CASE 2: CREATE NEW ORDER
     execute(sql("""
         INSERT INTO orders
         (restaurant_id, table_no, customer_name, items, total, status, created_at)
         VALUES (?,?,?,?,?, 'Received', CURRENT_TIMESTAMP)
     """), (
-        data["restaurant_id"],
-        data["table"],
+        restaurant_id,
+        table_no,
         data.get("customer_name", ""),
-        json.dumps(clean_items),
-        total
+        json.dumps(new_items),
+        new_total
     ))
 
     commit()
     return jsonify({"success": True})
+
 
 # --------------------------------------------------
 # ADMIN & KITCHEN
@@ -828,6 +863,17 @@ def edit_order(order_id):
         gst=gst,
         total=total
     )
+@app.route("/api/order/<int:order_id>/generate-close", methods=["POST"])
+@login_required("admin")
+def generate_and_close(order_id):
+    execute(sql("""
+        UPDATE orders
+        SET status='Closed'
+        WHERE id=? AND restaurant_id=?
+    """), (order_id, session["restaurant_id"]))
+
+    commit()
+    return jsonify({"success": True})
 
 
 @app.route("/bill/<int:order_id>")
