@@ -105,7 +105,7 @@ def login():
 
             execute(sql("""
                 UPDATE users
-                SET otp_code=?, otp_expires_at=datetime('now', '+10 minutes')
+                SET otp_code=?, otp_expires_at=NOW() + INTERVAL '10 minutes'
                 WHERE username=?
             """), (otp, email))
 
@@ -206,7 +206,7 @@ def signup():
             hashed_pw = generate_password_hash(request.form["password"])
 
             execute(sql("""
-                INSERT INTO users (restaurant_id, username, password, role)
+                INSERT INTO users (restaurant_id, username, password, role, is_verified)
                 VALUES (?, ?, ?, 'admin')
             """), (
                 restaurant_id,
@@ -251,52 +251,67 @@ def signup():
 
 @app.route("/login/google")
 def google_login():
+    # Step 1: Redirect to Google if not authorized
     if not google.authorized:
         return redirect(url_for("google.login"))
 
+    # Step 2: Fetch Google profile
     resp = google.get("/oauth2/v2/userinfo")
     if not resp.ok:
-        return "Google login failed", 400
+        return render_template(
+            "login.html",
+            error="Google authentication failed"
+        )
 
     info = resp.json()
-    email = info["email"].lower()
+    email = info["email"].strip().lower()
 
-    user = fetchone(sql("SELECT * FROM users WHERE username=?"), (email,))
+    # Step 3: Check if user exists
+    user = fetchone(
+        sql("SELECT * FROM users WHERE username=?"),
+        (email,)
+    )
 
-    # ❌ DO NOT CREATE USERS HERE
     if not user:
         return render_template(
             "login.html",
             error="Account not found. Please sign up first."
         )
 
-    # 🔐 OTP FLOW
+    # Step 4: Allow Google login ONLY for admin / superadmin
+    if user["role"] not in ("admin", "superadmin"):
+        return render_template(
+            "login.html",
+            error="Google login is allowed only for admin accounts"
+        )
+
+    # Step 5: If NOT verified → send OTP
     if not user["is_verified"]:
         otp = generate_otp()
 
         execute(sql("""
             UPDATE users
-            SET otp_code=?, otp_expires_at=NOW() + INTERVAL '10 minutes'
+            SET otp_code=?,
+                otp_expires_at=NOW() + INTERVAL '10 minutes'
             WHERE username=?
         """), (otp, email))
 
         commit()
         send_otp_email(email, otp)
 
+        session.clear()
         session["pending_email"] = email
+
         return redirect("/verify-email")
 
-    # ✅ LOGIN
+    # Step 6: Verified → login
+    session.clear()
     session["user"] = user["username"]
     session["role"] = user["role"]
     session["restaurant_id"] = user["restaurant_id"]
 
-    if user["role"] == "admin":
-        return redirect("/admin")
-    elif user["role"] == "kitchen":
-        return redirect("/kitchen")
-    else:
-        return redirect("/platform/restaurants")
+    return redirect("/admin")
+
 
 @app.route("/verify-email", methods=["GET", "POST"])
 def verify_email():
