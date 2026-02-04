@@ -82,7 +82,6 @@ google_bp = make_google_blueprint(
     redirect_url="/login/google"
 )
 
-)
 app.register_blueprint(google_bp, url_prefix="/login")
 
 # --------------------------------------------------
