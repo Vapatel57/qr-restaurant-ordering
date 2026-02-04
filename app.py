@@ -4,17 +4,17 @@ from flask import (
     current_app
 )
 import uuid
-
+from flask import url_for
+from flask_dance.contrib.google import google
 from db import (
     execute, fetchone, fetchall, commit, sql,
     init_db, close_db, today_clause, get_db
 )
-
+from email_utils import send_otp_email
+from otp_utils import generate_otp   # or wherever you put it
 import cloudinary
 import cloudinary.uploader
-
 from auth import login_required
-
 import os, json, time, qrcode
 from zipfile import ZipFile
 from reportlab.pdfgen import canvas
@@ -88,32 +88,50 @@ app.register_blueprint(google_bp, url_prefix="/login")
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
+        email = request.form["username"]
+        password = request.form["password"]
+
         user = fetchone(
             sql("SELECT * FROM users WHERE username=?"),
-            (request.form["username"],)
+            (email,)
         )
 
-        if not user or not check_password_hash(user["password"], request.form["password"]):
+        if not user or not check_password_hash(user["password"], password):
             return render_template("login.html", error="Invalid email or password")
 
-        if not user:
-            return render_template(
-                "login.html",
-                error="Account not found or invalid password"
-            )
+        # 🔐 IF NOT VERIFIED → SEND OTP
+        if not user["is_verified"]:
+            otp = generate_otp()
 
+            execute(sql("""
+                UPDATE users
+                SET otp_code=?, otp_expires_at=datetime('now', '+10 minutes')
+                WHERE username=?
+            """), (otp, email))
+
+            commit()
+
+            send_otp_email(email, otp)
+
+            # store email temporarily
+            session["pending_email"] = email
+
+            return redirect("/verify-email")
+
+        # ✅ VERIFIED USER → NORMAL LOGIN
         session["user"] = user["username"]
         session["role"] = user["role"]
         session["restaurant_id"] = user["restaurant_id"]
 
-        if user["role"] == "superadmin":
-            return redirect("/platform/restaurants")
-        elif user["role"] == "admin":
+        if user["role"] == "admin":
             return redirect("/admin")
-        else:
+        elif user["role"] == "kitchen":
             return redirect("/kitchen")
+        else:
+            return redirect("/platform/restaurants")
 
     return render_template("login.html")
+
 @app.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
     if request.method == "POST":
@@ -140,7 +158,6 @@ def forgot_password():
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
-
     if request.method == "POST":
         email = request.form["email"].strip().lower()
         subdomain = request.form["subdomain"].strip().lower()
@@ -179,26 +196,43 @@ def signup():
                 request.form.get("address")
             ))
 
-            # ✅ GET ID (Postgres vs SQLite)
+            # ✅ GET RESTAURANT ID
             if os.getenv("DB_TYPE") == "postgres":
                 restaurant_id = cursor.fetchone()["id"]
             else:
                 restaurant_id = cursor.lastrowid
 
-            # ✅ CREATE ADMIN USER
+            # ✅ CREATE ADMIN USER (UNVERIFIED)
             hashed_pw = generate_password_hash(request.form["password"])
 
             execute(sql("""
                 INSERT INTO users (restaurant_id, username, password, role)
-                VALUES (?, ?, ?, ?)
+                VALUES (?, ?, ?, 'admin')
             """), (
                 restaurant_id,
                 email,
-                hashed_pw,
-                "admin"
+                hashed_pw
             ))
 
+            # 🔐 GENERATE & SAVE OTP
+            otp = generate_otp()
+
+            execute(sql("""
+                UPDATE users
+                SET otp_code=?, otp_expires_at=NOW() + INTERVAL '10 minutes'
+                WHERE username=?
+            """), (otp, email))
+
             commit()
+
+            # 📧 SEND OTP EMAIL
+            send_otp_email(email, otp)
+
+            # 🧠 STORE TEMP SESSION
+            session.clear()
+            session["pending_email"] = email
+
+            return redirect("/verify-email")
 
         except Exception as e:
             current_app.logger.exception(e)
@@ -212,16 +246,98 @@ def signup():
                 error="Something went wrong. Please try again."
             )
 
-
-        # ✅ AUTO LOGIN
-        session.clear()
-        session["user"] = email
-        session["role"] = "admin"
-        session["restaurant_id"] = restaurant_id
-
-        return redirect("/admin")
-
     return render_template("signup.html")
+
+
+@app.route("/login/google")
+def google_login():
+    if not google.authorized:
+        return redirect(url_for("google.login"))
+
+    resp = google.get("/oauth2/v2/userinfo")
+    if not resp.ok:
+        return "Google login failed", 400
+
+    info = resp.json()
+    email = info["email"].lower()
+
+    user = fetchone(sql("SELECT * FROM users WHERE username=?"), (email,))
+
+    # ❌ DO NOT CREATE USERS HERE
+    if not user:
+        return render_template(
+            "login.html",
+            error="Account not found. Please sign up first."
+        )
+
+    # 🔐 OTP FLOW
+    if not user["is_verified"]:
+        otp = generate_otp()
+
+        execute(sql("""
+            UPDATE users
+            SET otp_code=?, otp_expires_at=NOW() + INTERVAL '10 minutes'
+            WHERE username=?
+        """), (otp, email))
+
+        commit()
+        send_otp_email(email, otp)
+
+        session["pending_email"] = email
+        return redirect("/verify-email")
+
+    # ✅ LOGIN
+    session["user"] = user["username"]
+    session["role"] = user["role"]
+    session["restaurant_id"] = user["restaurant_id"]
+
+    if user["role"] == "admin":
+        return redirect("/admin")
+    elif user["role"] == "kitchen":
+        return redirect("/kitchen")
+    else:
+        return redirect("/platform/restaurants")
+
+@app.route("/verify-email", methods=["GET", "POST"])
+def verify_email():
+    email = session.get("pending_email")
+
+    if not email:
+        return redirect("/login")
+
+    if request.method == "POST":
+        code = request.form["otp"]
+
+        user = fetchone(sql("""
+            SELECT * FROM users
+            WHERE username=?
+            AND otp_code=?
+            AND otp_expires_at > NOW()
+        """), (email, code))
+
+        if not user:
+            return render_template("verify.html", error="Invalid or expired OTP")
+
+        execute(sql("""
+            UPDATE users
+            SET is_verified=TRUE,
+                otp_code=NULL,
+                otp_expires_at=NULL
+            WHERE username=?
+        """), (email,))
+
+        commit()
+
+        session.clear()
+        session["user"] = user["username"]
+        session["role"] = user["role"]
+        session["restaurant_id"] = user["restaurant_id"]
+
+        return redirect(
+            "/admin" if user["role"] == "admin" else "/kitchen"
+        )
+
+    return render_template("verify.html")
 
 @app.route("/logout")
 def logout():
@@ -593,21 +709,13 @@ def kitchen_users():
 @login_required("admin")
 def create_kitchen_user():
     data = request.get_json()
-
-    if not data:
-        return jsonify({"error": "No data"}), 400
-
     email = data.get("email", "").strip().lower()
     password = data.get("password")
 
     if not email or not password:
         return jsonify({"error": "Email & password required"}), 400
 
-    # ❗ Prevent duplicate user
-    if fetchone(
-        sql("SELECT id FROM users WHERE username=?"),
-        (email,)
-    ):
+    if fetchone(sql("SELECT id FROM users WHERE username=?"), (email,)):
         return jsonify({"error": "User already exists"}), 400
 
     hashed_pw = generate_password_hash(password)
@@ -621,8 +729,19 @@ def create_kitchen_user():
         hashed_pw
     ))
 
+    otp = generate_otp()
+
+    execute(sql("""
+        UPDATE users
+        SET otp_code=?, otp_expires_at=NOW() + INTERVAL '10 minutes'
+        WHERE username=?
+    """), (otp, email))
+
     commit()
-    return jsonify({"success": True})
+    send_otp_email(email, otp)
+
+    return jsonify({"success": True, "message": "OTP sent to kitchen user"})
+
 
 @app.route("/api/kitchen-users/<int:user_id>", methods=["DELETE"])
 @login_required("admin")
