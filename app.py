@@ -206,13 +206,14 @@ def signup():
             hashed_pw = generate_password_hash(request.form["password"])
 
             execute(sql("""
-                INSERT INTO users (restaurant_id, username, password, role, is_verified)
+                INSERT INTO users (restaurant_id, username, password, role)
                 VALUES (?, ?, ?, 'admin')
             """), (
                 restaurant_id,
                 email,
                 hashed_pw
             ))
+
 
             # 🔐 GENERATE & SAVE OTP
             otp = generate_otp()
@@ -251,67 +252,96 @@ def signup():
 
 @app.route("/login/google")
 def google_login():
-    # Step 1: Redirect to Google if not authorized
     if not google.authorized:
         return redirect(url_for("google.login"))
 
-    # Step 2: Fetch Google profile
     resp = google.get("/oauth2/v2/userinfo")
     if not resp.ok:
-        return render_template(
-            "login.html",
-            error="Google authentication failed"
-        )
+        return "Google authentication failed", 400
 
     info = resp.json()
-    email = info["email"].strip().lower()
+    email = info["email"].lower()
 
-    # Step 3: Check if user exists
     user = fetchone(
         sql("SELECT * FROM users WHERE username=?"),
         (email,)
     )
 
-    if not user:
-        return render_template(
-            "login.html",
-            error="Account not found. Please sign up first."
-        )
+    # ✅ EXISTING USER → LOGIN DIRECTLY
+    if user:
+        session.clear()
+        session["user"] = user["username"]
+        session["role"] = user["role"]
+        session["restaurant_id"] = user["restaurant_id"]
 
-    # Step 4: Allow Google login ONLY for admin / superadmin
-    if user["role"] not in ("admin", "superadmin"):
-        return render_template(
-            "login.html",
-            error="Google login is allowed only for admin accounts"
-        )
+        if user["role"] == "admin":
+            return redirect("/admin")
+        elif user["role"] == "kitchen":
+            return redirect("/kitchen")
+        else:
+            return redirect("/platform/restaurants")
 
-    # Step 5: If NOT verified → send OTP
-    if not user["is_verified"]:
-        otp = generate_otp()
+    # 🆕 NEW GOOGLE USER → COMPLETE SETUP
+    session.clear()
+    session["google_signup_email"] = email
 
+    return redirect("/signup/google")
+@app.route("/signup/google", methods=["GET", "POST"])
+def google_signup():
+    email = session.get("google_signup_email")
+    if not email:
+        return redirect("/login")
+
+    if request.method == "POST":
+        subdomain = request.form["subdomain"].strip().lower()
+
+        # ❌ Subdomain check
+        if fetchone(
+            sql("SELECT id FROM restaurants WHERE subdomain=?"),
+            (subdomain,)
+        ):
+            return render_template(
+                "signup_google.html",
+                email=email,
+                error="Subdomain already taken"
+            )
+
+        # ✅ Create restaurant
+        cursor = execute(sql("""
+            INSERT INTO restaurants (name, subdomain, gstin, phone, address)
+            VALUES (?, ?, ?, ?, ?)
+            RETURNING id
+        """), (
+            request.form["restaurant_name"],
+            subdomain,
+            request.form.get("gstin"),
+            request.form.get("phone"),
+            request.form.get("address")
+        ))
+
+        restaurant_id = cursor.fetchone()["id"]
+
+        # ✅ Create VERIFIED admin user (Google trusted)
         execute(sql("""
-            UPDATE users
-            SET otp_code=?,
-                otp_expires_at=NOW() + INTERVAL '10 minutes'
-            WHERE username=?
-        """), (otp, email))
+            INSERT INTO users
+            (restaurant_id, username, role, is_verified, auth_provider)
+            VALUES (?, ?, 'admin', TRUE, 'google')
+        """), (
+            restaurant_id,
+            email
+        ))
 
         commit()
-        send_otp_email(email, otp)
 
+        # ✅ Login
         session.clear()
-        session["pending_email"] = email
+        session["user"] = email
+        session["role"] = "admin"
+        session["restaurant_id"] = restaurant_id
 
-        return redirect("/verify-email")
+        return redirect("/admin")
 
-    # Step 6: Verified → login
-    session.clear()
-    session["user"] = user["username"]
-    session["role"] = user["role"]
-    session["restaurant_id"] = user["restaurant_id"]
-
-    return redirect("/admin")
-
+    return render_template("signup_google.html", email=email)
 
 @app.route("/verify-email", methods=["GET", "POST"])
 def verify_email():

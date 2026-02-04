@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Complete Google Signup</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Reuse your existing auth styles -->
+    <link rel="stylesheet" href="/static/css/login.css">
+</head>
+<body>
+
+<div class="auth-container">
+    <div class="auth-card">
+
+        <h2 class="auth-title">Create Restaurant Account</h2>
+
+        <p class="auth-subtitle">
+            Signed in with Google as<br>
+            <strong>{{ email }}</strong>
+        </p>
+
+        {% if error %}
+            <div class="auth-error">
+                {{ error }}
+            </div>
+        {% endif %}
+
+        <form method="POST" class="auth-form">
+
+            <input
+                type="text"
+                name="restaurant_name"
+                placeholder="Restaurant Name"
+                required
+            >
+
+            <input
+                type="text"
+                name="subdomain"
+                placeholder="Subdomain (e.g. alexa)"
+                required
+            >
+
+            <input
+                type="text"
+                name="gstin"
+                placeholder="GSTIN (Optional)"
+            >
+
+            <input
+                type="text"
+                name="phone"
+                placeholder="Contact Number"
+            >
+
+            <textarea
+                name="address"
+                placeholder="Restaurant Address"
+                rows="3"
+            ></textarea>
+
+            <button type="submit" class="auth-button">
+                Create Account & Continue
+            </button>
+
+        </form>
+
+        <p class="auth-footer">
+            By continuing, you agree to our terms and privacy policy.
+        </p>
+
+    </div>
+</div>
+
+</body>
+</html>
