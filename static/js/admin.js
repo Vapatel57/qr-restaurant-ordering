@@ -7,48 +7,33 @@ const revenueEl = document.getElementById("today-revenue");
 
 function loadOrders() {
     fetch("/api/orders")
-        .then(res => {
-            if (!res.ok) throw new Error("Failed to load orders");
-            return res.json();
-        })
+        .then(res => res.json())
         .then(renderOrders)
-        .catch(err => console.error("Admin load error:", err));
+        .catch(err => console.error("Load error:", err));
 }
 
-/* ================= EDIT BILL ================= */
+/* ================= ACTIONS ================= */
 
 function openEditBill(orderId) {
     window.location.href = `/admin/order/${orderId}/edit`;
 }
-function closeOrder(orderId) {
-    if (!confirm("Generate final bill and close this table?")) return;
+
+function generateBillAndClose(orderId) {
+    if (!confirm("Generate bill and close this table?")) return;
 
     fetch(`/api/order/${orderId}/close`, { method: "POST" })
         .then(r => r.json())
         .then(r => {
-            if (r.success) loadOrders();
-            else alert("Failed to close order");
-        });
-}
-function generateBillAndClose(orderId) {
-    if (!confirm("Generate bill and close this table?")) return;
-
-    fetch(`/api/order/${orderId}/close`, {
-        method: "POST"
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            // ✅ REDIRECT TO BILL PAGE
-            window.location.href = `/bill/${orderId}`;
-        } else {
-            alert("Failed to close order");
-        }
-    })
-    .catch(() => alert("Server error"));
+            if (r.success) {
+                window.location.href = `/bill/${orderId}`;
+            } else {
+                alert("Failed to close order");
+            }
+        })
+        .catch(() => alert("Server error"));
 }
 
-/* ================= RENDER ORDERS ================= */
+/* ================= RENDER TABLE ================= */
 
 function renderOrders(orders) {
     tableBody.innerHTML = "";
@@ -70,50 +55,58 @@ function renderOrders(orders) {
     }
 
     orders.forEach(o => {
-    const status = (o.status || "").toLowerCase().trim();
-    const isClosed = status === "closed";
+        const status = (o.status || "").toLowerCase().trim();
+        const isClosed = status === "closed";
 
-    if (!isClosed) pending++;
-    if (isClosed) revenue += Number(o.total || 0);
+        if (!isClosed) pending++;
+        if (isClosed) revenue += Number(o.total || 0);
 
-    tableBody.innerHTML += `
-        <tr class="border-b hover:bg-gray-50">
-            <td class="p-4 font-bold">Table ${o.table_no}</td>
+        const itemsArr = Array.isArray(o.items)
+            ? o.items
+            : JSON.parse(o.items || "[]");
 
-            <td class="p-4 text-sm">${itemsText}</td>
+        const itemsText = itemsArr.length
+            ? itemsArr.map(i => `${i.qty}× ${i.name}`).join(", ")
+            : "<span class='text-gray-400'>No items</span>";
 
-            <td class="p-4 font-semibold">₹${o.total}</td>
+        tableBody.innerHTML += `
+            <tr class="border-b hover:bg-gray-50">
+                <td class="p-4 font-bold">Table ${o.table_no}</td>
 
-            <td class="p-4">
-                <span class="badge">${o.status}</span>
-            </td>
+                <td class="p-4 text-sm">${itemsText}</td>
 
-            <td class="p-4 flex gap-2">
-                ${
-                    !isClosed
-                    ? `
-                    <button
-                        onclick="openEditBill(${o.id})"
-                        class="bg-blue-600 text-white px-3 py-1 rounded text-sm">
-                        Edit
-                    </button>
+                <td class="p-4 font-semibold">₹${o.total}</td>
 
-                    <button
-                        onclick="generateBillAndClose(${o.id})"
-                        class="bg-red-600 text-white px-3 py-1 rounded text-sm">
-                        Generate Bill & Close
-                    </button>
-                    `
-                    : `
-                    <span class="text-gray-400 font-semibold text-sm">
-                        Closed
-                    </span>
-                    `
-                }
-            </td>
-        </tr>
-    `;
-});
+                <td class="p-4">
+                    <span class="badge">${o.status}</span>
+                </td>
+
+                <td class="p-4 flex gap-2">
+                    ${
+                        !isClosed
+                        ? `
+                        <button
+                            onclick="openEditBill(${o.id})"
+                            class="bg-blue-600 text-white px-3 py-1 rounded text-sm">
+                            Edit
+                        </button>
+
+                        <button
+                            onclick="generateBillAndClose(${o.id})"
+                            class="bg-red-600 text-white px-3 py-1 rounded text-sm">
+                            Generate Bill & Close
+                        </button>
+                        `
+                        : `
+                        <span class="text-gray-400 font-semibold text-sm">
+                            Closed
+                        </span>
+                        `
+                    }
+                </td>
+            </tr>
+        `;
+    });
 
     pendingCount.innerText = pending;
     revenueEl.innerText = `₹${revenue}`;
