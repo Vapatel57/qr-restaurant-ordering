@@ -20,6 +20,16 @@ function loadOrders() {
 function openEditBill(orderId) {
     window.location.href = `/admin/order/${orderId}/edit`;
 }
+function closeOrder(orderId) {
+    if (!confirm("Generate final bill and close this table?")) return;
+
+    fetch(`/api/order/${orderId}/close`, { method: "POST" })
+        .then(r => r.json())
+        .then(r => {
+            if (r.success) loadOrders();
+            else alert("Failed to close order");
+        });
+}
 
 /* ================= RENDER ORDERS ================= */
 
@@ -67,17 +77,25 @@ function renderOrders(orders) {
                 </td>
 
                 <td class="p-4 flex gap-2">
-                    <a href="/bill/${o.id}"
-                       class="bg-emerald-600 text-white px-3 py-1 rounded text-sm">
-                        Bill
-                    </a>
+    <a href="/bill/${o.id}"
+       class="bg-emerald-600 text-white px-3 py-1 rounded text-sm">
+        Bill
+    </a>
 
-                    <button
-                        onclick="openEditBill(${o.id})"
-                        class="bg-blue-600 text-white px-3 py-1 rounded text-sm">
-                        Edit
-                    </button>
-                </td>
+    <button
+        onclick="openEditBill(${o.id})"
+        class="bg-blue-600 text-white px-3 py-1 rounded text-sm">
+        Edit
+    </button>
+
+    ${o.status !== "Closed" ? `
+    <button
+        onclick="closeOrder(${o.id})"
+        class="bg-red-600 text-white px-3 py-1 rounded text-sm">
+        Generate Bill & Close
+    </button>` : ""}
+</td>
+
             </tr>
         `;
     });

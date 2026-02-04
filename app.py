@@ -343,6 +343,17 @@ def place_order():
     commit()
     return jsonify({"success": True})
 
+@app.route("/api/order/<int:order_id>/close", methods=["POST"])
+@login_required("admin")
+def close_order(order_id):
+    execute(sql("""
+        UPDATE orders
+        SET status='Closed'
+        WHERE id=? AND restaurant_id=?
+    """), (order_id, session["restaurant_id"]))
+
+    commit()
+    return jsonify({"success": True})
 
 # --------------------------------------------------
 # ADMIN & KITCHEN
