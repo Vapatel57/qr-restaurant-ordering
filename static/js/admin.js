@@ -30,6 +30,23 @@ function closeOrder(orderId) {
             else alert("Failed to close order");
         });
 }
+function generateBillAndClose(orderId) {
+    if (!confirm("Generate bill and close this table?")) return;
+
+    fetch(`/api/order/${orderId}/close`, {
+        method: "POST"
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            // ✅ REDIRECT TO BILL PAGE
+            window.location.href = `/bill/${orderId}`;
+        } else {
+            alert("Failed to close order");
+        }
+    })
+    .catch(() => alert("Server error"));
+}
 
 /* ================= RENDER ORDERS ================= */
 
@@ -85,13 +102,11 @@ function renderOrders(orders) {
 
     ${o.status !== "Closed" ? `
     <button
-        onclick="closeOrder(${o.id})"
+        onclick="generateBillAndClose({{ o.id }})"
         class="bg-red-600 text-white px-3 py-1 rounded text-sm">
         Generate Bill & Close
-    </button>` : ""}
+        </button>` : ""}
 </td>
-
-
             </tr>
         `;
     });
