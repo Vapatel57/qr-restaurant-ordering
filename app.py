@@ -226,101 +226,59 @@ def signup():
         return redirect("/verify-email")
 
     return render_template("signup.html")
-
-
-
-@app.route("/login/google")
-def google_login():
+@app.route("/google/callback")
+def google_callback():
     if not google.authorized:
-        return redirect(url_for("google.login"))
+        return redirect("/login")
 
     resp = google.get("/oauth2/v2/userinfo")
     if not resp.ok:
-        return "Google authentication failed", 400
+        current_app.logger.error("Google userinfo failed")
+        return redirect("/login")
 
     info = resp.json()
-    email = info["email"].lower()
+    email = info.get("email", "").lower()
+    name = info.get("name", "")
+    google_id = info.get("id")
 
+    if not email:
+        return redirect("/login")
+
+    # 🔍 Check existing user
     user = fetchone(
         sql("SELECT * FROM users WHERE username=?"),
         (email,)
     )
 
-    # ✅ EXISTING USER → LOGIN DIRECTLY
+    # ✅ EXISTING USER → LOGIN
     if user:
         session.clear()
         session["user"] = user["username"]
         session["role"] = user["role"]
         session["restaurant_id"] = user["restaurant_id"]
-
-        if user["role"] == "admin":
-            return redirect("/admin")
-        elif user["role"] == "kitchen":
-            return redirect("/kitchen")
-        else:
-            return redirect("/platform/restaurants")
-
-    # 🆕 NEW GOOGLE USER → COMPLETE SETUP
-    session.clear()
-    session["google_signup_email"] = email
-
-    return redirect("/signup/google")
-@app.route("/signup/google", methods=["GET", "POST"])
-def google_signup():
-    email = session.get("google_signup_email")
-    if not email:
-        return redirect("/login")
-
-    if request.method == "POST":
-        subdomain = request.form["subdomain"].strip().lower()
-
-        # ❌ Subdomain check
-        if fetchone(
-            sql("SELECT id FROM restaurants WHERE subdomain=?"),
-            (subdomain,)
-        ):
-            return render_template(
-                "signup_google.html",
-                email=email,
-                error="Subdomain already taken"
-            )
-
-        # ✅ Create restaurant
-        cursor = execute(sql("""
-            INSERT INTO restaurants (name, subdomain, gstin, phone, address)
-            VALUES (?, ?, ?, ?, ?)
-            RETURNING id
-        """), (
-            request.form["restaurant_name"],
-            subdomain,
-            request.form.get("gstin"),
-            request.form.get("phone"),
-            request.form.get("address")
-        ))
-
-        restaurant_id = cursor.fetchone()["id"]
-
-        # ✅ Create VERIFIED admin user (Google trusted)
-        execute(sql("""
-            INSERT INTO users
-            (restaurant_id, username, role, is_verified, auth_provider)
-            VALUES (?, ?, 'admin', TRUE, 'google')
-        """), (
-            restaurant_id,
-            email
-        ))
-
-        commit()
-
-        # ✅ Login
-        session.clear()
-        session["user"] = email
-        session["role"] = "admin"
-        session["restaurant_id"] = restaurant_id
-
         return redirect("/admin")
 
-    return render_template("signup_google.html", email=email)
+    # 🆕 NEW GOOGLE USER → TEMP USER (NO RESTAURANT)
+    cursor = execute(
+        sql("""
+            INSERT INTO users
+            (username, password, role, is_verified, auth_provider)
+            VALUES (?, ?, 'admin', TRUE, 'google')
+            RETURNING id
+        """),
+        (email, generate_password_hash(google_id))
+    )
+
+    user_id = cursor.fetchone()["id"]
+    commit()
+
+    session.clear()
+    session["pending_google_user"] = user_id
+    session["pending_email"] = email
+    session["pending_name"] = name
+
+    return redirect("/onboarding")
+
 
 @app.route("/verify-email", methods=["GET", "POST"])
 def verify_email():
