@@ -1,26 +1,20 @@
 import smtplib
-from email.message import EmailMessage
+import socket
 import os
+from email.message import EmailMessage
 
-SMTP_EMAIL = os.getenv("SMTP_EMAIL")      # your gmail
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")  # app password
+socket.setdefaulttimeout(5)  # 🔥 VERY IMPORTANT
 
 def send_otp_email(to_email, otp):
     msg = EmailMessage()
-    msg["Subject"] = "Verify your login"
-    msg["From"] = SMTP_EMAIL
+    msg["Subject"] = "Your OTP Verification Code"
+    msg["From"] = os.getenv("SMTP_EMAIL")
     msg["To"] = to_email
+    msg.set_content(f"Your OTP is: {otp}")
 
-    msg.set_content(f"""
-Your verification code is:
-
-{otp}
-
-This code will expire in 10 minutes.
-
-If you did not try to login, ignore this email.
-""")
-
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(SMTP_EMAIL, SMTP_PASSWORD)
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=5) as server:
+        server.login(
+            os.getenv("SMTP_EMAIL"),
+            os.getenv("SMTP_PASSWORD")
+        )
         server.send_message(msg)
