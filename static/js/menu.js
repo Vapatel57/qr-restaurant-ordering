@@ -4,6 +4,8 @@ const params = new URLSearchParams(window.location.search);
 const ORDER_ID = params.get("add_to_order");
 const TABLE_NO = params.get("table");
 
+let ALL_ITEMS = [];
+
 /* ================= MODALS ================= */
 
 function openAddModal() {
@@ -26,73 +28,90 @@ function closeEditModal() {
     document.getElementById("edit-modal").classList.add("hidden");
 }
 
-/* ================= LOAD MENU ================= */
+/* ================= LOAD MENU (FETCH ONCE) ================= */
 
-function loadMenu(category = null) {
+function loadMenu() {
     fetch("/api/menu")
         .then(res => res.json())
         .then(items => {
-            menuGrid.innerHTML = "";
-
-            if (!items.length) {
-                menuGrid.innerHTML = `
-                    <p class="text-gray-500 col-span-full">No menu items found</p>
-                `;
-                return;
-            }
-
-            items
-                .filter(i => !category || i.category === category)
-                .forEach(item => {
-                    const imgSrc = item.image
-                        ? item.image
-                        : "/static/no-image.png";
-
-                    menuGrid.innerHTML += `
-                        <div class="bg-white rounded-xl shadow overflow-hidden">
-                            <img src="${imgSrc}" class="h-40 w-full object-cover">
-
-                            <div class="p-4">
-                                <h4 class="font-bold">${item.name}</h4>
-                                <p class="text-emerald-600 font-bold">₹${item.price}</p>
-                                <p class="text-sm text-gray-500">${item.category}</p>
-
-                                <div class="flex flex-wrap gap-2 mt-3">
-                                    <button onclick="toggleStock(${item.id})"
-                                        class="px-3 py-1 bg-gray-800 text-white rounded">
-                                        ${item.available ? "Disable" : "Enable"}
-                                    </button>
-
-                                    <button onclick="openEditModal(${item.id}, '${item.name}', ${item.price}, '${item.category}')"
-                                        class="px-3 py-1 bg-blue-600 text-white rounded">
-                                        Edit
-                                    </button>
-
-                                    <button onclick="deleteItem(${item.id})"
-                                        class="px-3 py-1 bg-red-600 text-white rounded">
-                                        Delete
-                                    </button>
-
-                                    ${
-                                        ORDER_ID ? `
-                                        <button onclick="openAddToOrderModal(${item.id}, '${item.name}', ${item.price})"
-                                            class="px-3 py-1 bg-emerald-600 text-white rounded">
-                                            + Add to Table ${TABLE_NO}
-                                        </button>
-                                        ` : ""
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
+            ALL_ITEMS = items;
+            renderMenu(items);
         })
-        .catch(err => {
-            console.error(err);
+        .catch(() => {
             menuGrid.innerHTML = `
                 <p class="text-red-500 col-span-full">Failed to load menu</p>
             `;
         });
+}
+
+/* ================= RENDER MENU ================= */
+
+function renderMenu(items) {
+    menuGrid.innerHTML = "";
+
+    if (!items.length) {
+        menuGrid.innerHTML = `
+            <p class="text-gray-500 col-span-full">No matching dishes</p>
+        `;
+        return;
+    }
+
+    items.forEach(item => {
+        const imgSrc = item.image || "/static/no-image.png";
+
+        menuGrid.innerHTML += `
+            <div class="bg-white rounded-xl shadow overflow-hidden">
+                <img src="${imgSrc}" class="h-40 w-full object-cover">
+
+                <div class="p-4">
+                    <h4 class="font-bold">${item.name}</h4>
+                    <p class="text-emerald-600 font-bold">₹${item.price}</p>
+                    <p class="text-sm text-gray-500">${item.category}</p>
+
+                    <div class="flex flex-wrap gap-2 mt-3">
+                        <button onclick="toggleStock(${item.id})"
+                            class="px-3 py-1 bg-gray-800 text-white rounded">
+                            ${item.available ? "Disable" : "Enable"}
+                        </button>
+
+                        <button onclick="openEditModal(${item.id}, '${item.name}', ${item.price}, '${item.category}')"
+                            class="px-3 py-1 bg-blue-600 text-white rounded">
+                            Edit
+                        </button>
+
+                        <button onclick="deleteItem(${item.id})"
+                            class="px-3 py-1 bg-red-600 text-white rounded">
+                            Delete
+                        </button>
+
+                        ${
+                            ORDER_ID ? `
+                            <button onclick="openAddToOrderModal(${item.id}, '${item.name}')"
+                                class="px-3 py-1 bg-emerald-600 text-white rounded">
+                                + Add to Table ${TABLE_NO}
+                            </button>
+                            ` : ""
+                        }
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+}
+
+/* ================= SEARCH + CATEGORY FILTER ================= */
+
+function applyFilters() {
+    const q = document.getElementById("menuSearch").value.toLowerCase();
+    const category = document.getElementById("categoryFilter").value;
+
+    const filtered = ALL_ITEMS.filter(item => {
+        const matchName = item.name.toLowerCase().includes(q);
+        const matchCategory = !category || item.category === category;
+        return matchName && matchCategory;
+    });
+
+    renderMenu(filtered);
 }
 
 /* ================= ADD MENU ITEM ================= */
@@ -147,7 +166,7 @@ function deleteItem(id) {
         .catch(() => alert("Failed to delete item"));
 }
 
-/* ================= ADD TO ORDER (ADMIN BILL EDIT) ================= */
+/* ================= ADD TO ORDER ================= */
 
 let selectedItemId = null;
 let selectedItemName = "";
@@ -175,10 +194,7 @@ function confirmAddToOrder() {
     fetch(`/api/order/${ORDER_ID}/add-item`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            item_id: selectedItemId,
-            qty: qty
-        })
+        body: JSON.stringify({ item_id: selectedItemId, qty })
     })
         .then(res => res.json())
         .then(data => {
@@ -186,50 +202,29 @@ function confirmAddToOrder() {
                 alert(data.error || "Failed to add item");
                 return;
             }
-
             closeAddToOrderModal();
             alert(`✅ ${selectedItemName} added to Table ${TABLE_NO}`);
             window.location.href = "/admin";
         })
-        .catch(err => {
-            console.error(err);
-            alert("Add item failed");
-        });
+        .catch(() => alert("Add item failed"));
 }
+
+/* ================= QUICK MENU TEMPLATE ================= */
+
 function importTemplate(templateName) {
     fetch("/api/menu/import", {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            template: templateName
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ template: templateName })
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) loadMenu();
+            else alert(data.error || "Failed to import menu");
         })
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert(data.error || "Failed to import menu");
-        }
-    })
-    .catch(err => {
-        console.error(err);
-        alert("Something went wrong");
-    });
+        .catch(() => alert("Something went wrong"));
 }
-async function searchMenu() {
-    const q = document.getElementById("menuSearch").value;
-    const category = document.getElementById("categoryFilter").value;
 
-    const res = await fetch(
-        `/api/menu?search=${encodeURIComponent(q)}&category=${encodeURIComponent(category)}`
-    );
-    const data = await res.json();
-
-    renderMenu(data); // your existing render function
-}
 /* ================= INIT ================= */
 
 loadMenu();

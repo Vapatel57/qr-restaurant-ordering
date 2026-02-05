@@ -89,24 +89,20 @@
         <button onclick="importTemplate('pizza')" class="template-btn">Pizza / Cafe</button>
     </div>
 </div>
-
-        <!-- GRID -->
-        <div id="menu-grid"
-             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        </div>
-        <div class="flex gap-3 mb-6">
+<!-- SEARCH + FILTER -->
+<div class="flex gap-3 mb-6">
     <input
         id="menuSearch"
         type="text"
         placeholder="Search dish..."
         class="w-full border px-4 py-2 rounded-lg"
-        oninput="searchMenu()"
+        oninput="applyFilters()"
     />
 
     <select
         id="categoryFilter"
         class="border px-4 py-2 rounded-lg"
-        onchange="searchMenu()"
+        onchange="applyFilters()"
     >
         <option value="">All</option>
         <option value="Starters">Starters</option>
@@ -115,6 +111,15 @@
     </select>
 </div>
 
+<!-- GRID -->
+<div id="menu-grid"
+     class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+</div>
+
+        <!-- GRID -->
+        <div id="menu-grid"
+             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        </div>
 
     </main>
 </div>
@@ -279,9 +284,6 @@
     </div>
   </div>
 </div>
-
-
-
 <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
 </body>
 </html>
