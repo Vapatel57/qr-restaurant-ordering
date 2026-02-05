@@ -180,7 +180,24 @@ select:focus {
     background: #10b981;
     color: white;
 }
+.category-tab {
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        background-color: #f3f4f6; /* gray-100 */
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: #374151; /* gray-700 */
+        transition: all 0.2s ease;
+    }
 
+    .category-tab:hover {
+        background-color: #e5e7eb; /* gray-200 */
+    }
+
+    .active-tab {
+        background-color: #10b981; /* emerald-500 */
+        color: white;
+    }
 /* =====================
    MODALS
 ===================== */

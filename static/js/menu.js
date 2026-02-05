@@ -116,6 +116,17 @@ function filterByCategory(category = "") {
     CURRENT_CATEGORY = category;
     applyFilters();
 }
+function setCategory(btn, category) {
+    CURRENT_CATEGORY = category;
+
+    document
+        .querySelectorAll(".category-tab")
+        .forEach(b => b.classList.remove("active-tab"));
+
+    btn.classList.add("active-tab");
+
+    applyFilters();
+}
 
 
 /* ================= ADD MENU ITEM ================= */

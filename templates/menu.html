@@ -69,10 +69,32 @@
 
         <!-- FILTERS -->
         <div class="flex gap-3 mb-6">
-            <button onclick="filterByCategory('')" class="filter-btn">All</button>
-            <button onclick="filterByCategory('Starters')"class="filter-btn">Starters</button>
-            <button onclick="filterByCategory('Main Course')"class="filter-btn">Main Course</button>
-            <button onclick="filterByCategory('Beverages')"class="filter-btn">Beverages</button>
+           <div class="flex gap-2 mb-6" id="categoryTabs">
+    <button
+        onclick="setCategory(this, '')"
+        class="category-tab active-tab">
+        All
+    </button>
+
+    <button
+        onclick="setCategory(this, 'Starters')"
+        class="category-tab">
+        Starters
+    </button>
+
+    <button
+        onclick="setCategory(this, 'Main Course')"
+        class="category-tab">
+        Main Course
+    </button>
+
+    <button
+        onclick="setCategory(this, 'Beverages')"
+        class="category-tab">
+        Beverages
+    </button>
+</div>
+
         </div>
         <!-- QUICK MENU TEMPLATE -->
 <div class="bg-white p-5 rounded-xl shadow mb-6">
