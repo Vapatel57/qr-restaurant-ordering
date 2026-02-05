@@ -95,7 +95,7 @@ google_bp.redirect_url = "/google/after-login"
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        email = request.form["username"]
+        email = request.form["username"].strip().lower()
         password = request.form["password"]
 
         user = fetchone(
@@ -117,16 +117,27 @@ def login():
             """), (otp, email))
 
             commit()
-
             send_otp_email(email, otp)
 
-            # store email temporarily
+            session.clear()
             session["pending_email"] = email
-
             return redirect("/verify-email")
 
-        # ✅ VERIFIED USER → NORMAL LOGIN
+        # ===============================
+        # ✅ LOGIN SUCCESS
+        # ===============================
+        session.clear()
         session["user"] = user["username"]
+
+        SUPERADMIN_EMAIL = os.getenv("SUPERADMIN_EMAIL")
+
+        # 🔥 SUPER ADMIN OVERRIDE (OPTION 2)
+        if SUPERADMIN_EMAIL and user["username"] == SUPERADMIN_EMAIL:
+            session["role"] = "superadmin"
+            session["restaurant_id"] = None
+            return redirect("/platform/restaurants")
+
+        # 👤 NORMAL USERS
         session["role"] = user["role"]
         session["restaurant_id"] = user["restaurant_id"]
 
@@ -135,9 +146,10 @@ def login():
         elif user["role"] == "kitchen":
             return redirect("/kitchen")
         else:
-            return redirect("/platform/restaurants")
+            return redirect("/login")
 
     return render_template("login.html")
+
 
 @app.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
@@ -279,6 +291,9 @@ def onboarding():
 
 @app.route("/google/after-login")
 def google_after_login():
+    SUPERADMIN_EMAIL = os.getenv("SUPERADMIN_EMAIL")
+    if email == SUPERADMIN_EMAIL:
+        return redirect("/login")
     if not google.authorized:
         return redirect("/login")
 
@@ -400,6 +415,47 @@ def platform_restaurants():
     return render_template(
         "platform_restaurants.html",
         restaurants=[dict(r) for r in rows]
+    )
+@app.route("/platform/restaurants/<int:restaurant_id>")
+@login_required("superadmin")
+def platform_restaurant_details(restaurant_id):
+
+    restaurant = fetchone(sql("""
+        SELECT r.*, u.username AS admin_email
+        FROM restaurants r
+        JOIN users u ON u.restaurant_id = r.id AND u.role='admin'
+        WHERE r.id=?
+    """), (restaurant_id,))
+
+    if not restaurant:
+        return "Restaurant not found", 404
+
+    stats = fetchone(sql("""
+        SELECT
+            COUNT(id) AS total_orders,
+            COALESCE(SUM(total), 0) AS revenue
+        FROM orders
+        WHERE restaurant_id=?
+    """), (restaurant_id,))
+
+    menu_count = fetchone(sql("""
+        SELECT COUNT(*) AS count
+        FROM menu
+        WHERE restaurant_id=?
+    """), (restaurant_id,))
+
+    kitchen_users = fetchall(sql("""
+        SELECT username
+        FROM users
+        WHERE restaurant_id=? AND role='kitchen'
+    """), (restaurant_id,))
+
+    return render_template(
+        "platform_restaurant_details.html",
+        restaurant=restaurant,
+        stats=stats,
+        menu_count=menu_count["count"],
+        kitchen_users=[u["username"] for u in kitchen_users]
     )
 
 # --------------------------------------------------

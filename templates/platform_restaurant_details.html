@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Restaurant Details | QR-Order</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 p-8">
+
+<div class="max-w-5xl mx-auto">
+
+    <a href="/platform/restaurants"
+       class="text-sm text-gray-500 hover:underline mb-4 inline-block">
+        ← Back to Restaurants
+    </a>
+
+    <div class="bg-white p-6 rounded-xl shadow mb-6">
+        <h2 class="text-2xl font-bold mb-2">
+            {{ restaurant.name }}
+        </h2>
+
+        <p class="text-gray-600">
+            <strong>Subdomain:</strong> {{ restaurant.subdomain }}
+        </p>
+
+        <p class="text-gray-600">
+            <strong>Admin Email:</strong> {{ restaurant.admin_email }}
+        </p>
+
+        <p class="text-gray-600">
+            <strong>Phone:</strong> {{ restaurant.phone or "—" }}
+        </p>
+
+        <p class="text-gray-600">
+            <strong>GSTIN:</strong> {{ restaurant.gstin or "—" }}
+        </p>
+
+        <p class="text-gray-600">
+            <strong>Address:</strong> {{ restaurant.address or "—" }}
+        </p>
+    </div>
+
+    <!-- STATS -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="bg-white p-5 rounded-xl shadow">
+            <p class="text-sm text-gray-500 font-semibold">Total Orders</p>
+            <h3 class="text-2xl font-bold">{{ stats.total_orders }}</h3>
+        </div>
+
+        <div class="bg-white p-5 rounded-xl shadow">
+            <p class="text-sm text-gray-500 font-semibold">Revenue</p>
+            <h3 class="text-2xl font-bold text-emerald-600">
+                ₹{{ stats.revenue }}
+            </h3>
+        </div>
+
+        <div class="bg-white p-5 rounded-xl shadow">
+            <p class="text-sm text-gray-500 font-semibold">Menu Items</p>
+            <h3 class="text-2xl font-bold">{{ menu_count }}</h3>
+        </div>
+    </div>
+
+    <!-- KITCHEN USERS -->
+    <div class="bg-white p-6 rounded-xl shadow">
+        <h3 class="text-lg font-bold mb-3">Kitchen Users</h3>
+
+        {% if kitchen_users %}
+            <ul class="list-disc ml-5 text-gray-700">
+                {% for u in kitchen_users %}
+                    <li>{{ u }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="text-gray-500">No kitchen users added.</p>
+        {% endif %}
+    </div>
+
+</div>
+
+</body>
+</html>
