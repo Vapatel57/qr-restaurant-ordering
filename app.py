@@ -147,9 +147,13 @@ def login():
             return redirect("/kitchen")
         else:
             return redirect("/login")
+    print("LOGIN DEBUG →",
+      user["username"],
+      user["role"],
+      "verified:", user["is_verified"])
 
     return render_template("login.html")
-
+    
 
 @app.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
