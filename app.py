@@ -1288,82 +1288,6 @@ def thermal_bill(order_id):
     )
 
 
-
-# --------------------------------------------------
-# SSE (ORDERS + REVENUE)
-# --------------------------------------------------
-
-# @app.route("/events")
-# @login_required(["admin", "kitchen"])
-# def events():
-#     rid = session["restaurant_id"]
-
-#     def stream():
-#         with app.app_context():
-#             while True:
-#                 orders = fetchall(
-#                     sql(f"""
-#                         SELECT *
-#                         FROM orders
-#                         WHERE restaurant_id=?
-#                         AND {today_clause("created_at")}
-#                         ORDER BY id DESC
-#                     """),
-#                     (rid,)
-#                 )
-
-#                 revenue_row = fetchone(
-#                     sql(f"""
-#                         SELECT COALESCE(SUM(total), 0) AS revenue
-#                         FROM orders
-#                         WHERE restaurant_id=?
-#                         AND status='Served'
-#                         AND {today_clause("created_at")}
-#                     """),
-#                     (rid,)
-#                 )
-
-#                 payload = {
-#                     "orders": [
-#                         {k: json_safe(v) for k, v in dict(o).items()}
-#                         for o in orders
-#                         ],
-#                         "today_revenue": float(revenue_row["revenue"] or 0)
-#                 }
-
-
-#                 yield f"data:{json.dumps(payload)}\n\n"
-#                 time.sleep(2)
-
-#     return Response(stream(), mimetype="text/event-stream")
-
-# @app.route("/events/additions")
-# @login_required("kitchen")
-# def addition_events():
-#     rid = session["restaurant_id"]
-
-#     def stream():
-#         with app.app_context():
-#             while True:
-#                 additions = fetchall(
-#                     sql("""
-#                         SELECT *
-#                         FROM order_additions
-#                         WHERE restaurant_id=?
-#                         AND status='New'
-#                         ORDER BY created_at ASC
-#                     """),
-#                     (rid,)
-#                 )
-
-#                 yield f"data:{json.dumps([
-#                     {k: json_safe(v) for k, v in dict(a).items()}
-#                     for a in additions
-#                 ])}\n\n"
-
-#                 time.sleep(2)
-
-#     return Response(stream(), mimetype="text/event-stream")
 @app.route("/api/orders")
 @login_required("admin")
 def api_orders():
@@ -1412,7 +1336,6 @@ def home():
 
 # if __name__ == "__main__":
 #     app.run()
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)))

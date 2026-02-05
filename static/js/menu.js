@@ -1,6 +1,6 @@
 const menuGrid = document.getElementById("menu-grid");
 const params = new URLSearchParams(window.location.search);
-
+let CURRENT_CATEGORY = "";
 const ORDER_ID = params.get("add_to_order");
 const TABLE_NO = params.get("table");
 
@@ -103,16 +103,20 @@ function renderMenu(items) {
 
 function applyFilters() {
     const q = document.getElementById("menuSearch").value.toLowerCase();
-    const category = document.getElementById("categoryFilter").value;
 
     const filtered = ALL_ITEMS.filter(item => {
         const matchName = item.name.toLowerCase().includes(q);
-        const matchCategory = !category || item.category === category;
+        const matchCategory = !CURRENT_CATEGORY || item.category === CURRENT_CATEGORY;
         return matchName && matchCategory;
     });
 
     renderMenu(filtered);
 }
+function filterByCategory(category = "") {
+    CURRENT_CATEGORY = category;
+    applyFilters();
+}
+
 
 /* ================= ADD MENU ITEM ================= */
 
