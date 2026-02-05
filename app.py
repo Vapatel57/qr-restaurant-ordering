@@ -804,15 +804,28 @@ def menu_page():
 @app.route("/api/menu")
 @login_required("admin")
 def api_get_menu():
-    rows = fetchall(
-        sql("""
-            SELECT * FROM menu
-            WHERE restaurant_id=?
-            ORDER BY id DESC
-        """),
-        (session["restaurant_id"],)
-    )
+    rid = session["restaurant_id"]
+    search = request.args.get("search", "").strip().lower()
+    category = request.args.get("category", "")
 
+    query = """
+        SELECT *
+        FROM menu
+        WHERE restaurant_id=?
+    """
+    params = [rid]
+
+    if search:
+        query += " AND LOWER(name) LIKE ?"
+        params.append(f"%{search}%")
+
+    if category:
+        query += " AND category=?"
+        params.append(category)
+
+    query += " ORDER BY id DESC"
+
+    rows = fetchall(sql(query), tuple(params))
     return jsonify([dict(r) for r in rows])
 
 
@@ -820,33 +833,64 @@ def api_get_menu():
 @app.route("/api/menu", methods=["POST"])
 @login_required("admin")
 def api_add_menu():
+    name = request.form.get("name", "").strip()
+    price = request.form.get("price")
+    category = request.form.get("category")
     image = request.files.get("image")
+
+    # 🔒 BASIC VALIDATION
+    if not name or not price or not category:
+        return jsonify({"error": "Name, price and category are required"}), 400
+
     if not image:
         return jsonify({"error": "Image required"}), 400
 
-    # 🔥 Upload to Cloudinary
-    result = cloudinary.uploader.upload(
-        image,
-        folder="menu_images"
-    )
-
-    image_url = result["secure_url"]
-
-    execute(sql("""
-        INSERT INTO menu
-        (restaurant_id, name, price, category, image, available)
-        VALUES (?,?,?,?,?,TRUE)
+    # 🔥 DUPLICATE CHECK (CASE-INSENSITIVE)
+    exists = fetchone(sql("""
+        SELECT id FROM menu
+        WHERE restaurant_id = ?
+        AND LOWER(name) = LOWER(?)
     """), (
         session["restaurant_id"],
-        request.form["name"],
-        float(request.form["price"]),
-        request.form["category"],
-        image_url
+        name
     ))
 
-    commit()
-    return jsonify({"success": True})
+    if exists:
+        return jsonify({
+            "error": "Item with this name already exists"
+        }), 400
 
+    try:
+        # ☁️ Upload image to Cloudinary
+        result = cloudinary.uploader.upload(
+            image,
+            folder="menu_images"
+        )
+        image_url = result["secure_url"]
+
+        # 💾 Insert menu item
+        execute(sql("""
+            INSERT INTO menu
+            (restaurant_id, name, price, category, image, available)
+            VALUES (?, ?, ?, ?, ?, TRUE)
+        """), (
+            session["restaurant_id"],
+            name,
+            float(price),
+            category,
+            image_url
+        ))
+
+        commit()
+        return jsonify({"success": True})
+
+    except Exception as e:
+        current_app.logger.exception(e)
+        get_db().rollback()
+
+        return jsonify({
+            "error": "Failed to add menu item"
+        }), 500
 
 @app.route("/api/menu/toggle/<int:item_id>", methods=["POST"])
 @login_required("admin")
@@ -881,20 +925,43 @@ def import_menu_template():
 
     restaurant_id = session["restaurant_id"]
 
+    inserted = 0
+    skipped = 0
+
     for name, category in MENU_TEMPLATES[template]:
+        exists = fetchone(sql("""
+            SELECT id FROM menu
+            WHERE restaurant_id = ?
+            AND LOWER(name) = LOWER(?)
+        """), (
+            restaurant_id,
+            name
+        ))
+
+        if exists:
+            skipped += 1
+            continue  # 🔥 skip duplicates
+
         execute(sql("""
-            INSERT INTO menu (restaurant_id, name, price, category, image, available)
-            VALUES (?, ?, ?, ?, ?, TRUE)
+            INSERT INTO menu
+            (restaurant_id, name, price, category, image, available)
+            VALUES (?, ?, 0, ?, '', TRUE)
         """), (
             restaurant_id,
             name,
-            0.0,
-            category,
-            ""   # no image initially
+            category
         ))
 
+        inserted += 1
+
     commit()
-    return jsonify({"success": True})
+
+    return jsonify({
+        "success": True,
+        "added": inserted,
+        "skipped": skipped
+    })
+
 
 @app.route("/api/menu/<int:item_id>", methods=["PUT"])
 @login_required("admin")

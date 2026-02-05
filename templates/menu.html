@@ -94,6 +94,27 @@
         <div id="menu-grid"
              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         </div>
+        <div class="flex gap-3 mb-6">
+    <input
+        id="menuSearch"
+        type="text"
+        placeholder="Search dish..."
+        class="w-full border px-4 py-2 rounded-lg"
+        oninput="searchMenu()"
+    />
+
+    <select
+        id="categoryFilter"
+        class="border px-4 py-2 rounded-lg"
+        onchange="searchMenu()"
+    >
+        <option value="">All</option>
+        <option value="Starters">Starters</option>
+        <option value="Main Course">Main Course</option>
+        <option value="Beverages">Beverages</option>
+    </select>
+</div>
+
 
     </main>
 </div>

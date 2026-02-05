@@ -111,6 +111,57 @@ function renderOrders(orders) {
     pendingCount.innerText = pending;
     revenueEl.innerText = `₹${revenue}`;
 }
+// ===============================
+// 📅 PAST ORDERS HISTORY
+// ===============================
+
+function openHistory() {
+    document.getElementById("history-modal").classList.remove("hidden");
+}
+
+function closeHistory() {
+    document.getElementById("history-modal").classList.add("hidden");
+    document.getElementById("history-result").innerHTML = "";
+}
+
+async function loadHistory() {
+    const date = document.getElementById("history-date").value;
+
+    if (!date) {
+        alert("Please select a date");
+        return;
+    }
+
+    const res = await fetch(`/admin/orders/by-date?date=${date}`);
+    const data = await res.json();
+
+    if (data.error) {
+        document.getElementById("history-result").innerHTML =
+            `<p class="text-red-600">${data.error}</p>`;
+        return;
+    }
+
+    let html = `
+        <div class="font-semibold mb-2">
+            Orders: ${data.count} | Revenue: ₹${data.revenue}
+        </div>
+        <ul class="space-y-2">
+    `;
+
+    data.orders.forEach(o => {
+        html += `
+            <li class="border rounded p-2">
+                <div><b>Table:</b> ${o.table_no}</div>
+                <div><b>Total:</b> ₹${o.total}</div>
+                <div><b>Status:</b> ${o.status}</div>
+            </li>
+        `;
+    });
+
+    html += `</ul>`;
+
+    document.getElementById("history-result").innerHTML = html;
+}
 
 /* ================= INIT ================= */
 

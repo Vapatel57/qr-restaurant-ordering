@@ -196,7 +196,40 @@ function confirmAddToOrder() {
             alert("Add item failed");
         });
 }
+function importTemplate(templateName) {
+    fetch("/api/menu/import", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            template: templateName
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || "Failed to import menu");
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Something went wrong");
+    });
+}
+async function searchMenu() {
+    const q = document.getElementById("menuSearch").value;
+    const category = document.getElementById("categoryFilter").value;
 
+    const res = await fetch(
+        `/api/menu?search=${encodeURIComponent(q)}&category=${encodeURIComponent(category)}`
+    );
+    const data = await res.json();
+
+    renderMenu(data); // your existing render function
+}
 /* ================= INIT ================= */
 
 loadMenu();
