@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Menu Management | QR-Order</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Tailwind CSS -->
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- FontAwesome -->
@@ -49,7 +49,7 @@
       border-radius: 0.5rem;
       font-weight: 600;
       font-size: 0.875rem;
-      transition: all 0.2s ease;
+      transition: 0.2s;
     }
 
     .template-btn:hover {
@@ -64,14 +64,12 @@
     <!-- SIDEBAR -->
     <aside class="w-64 bg-gray-900 text-white hidden md:flex flex-col">
       <div class="p-6 text-2xl font-bold border-b border-gray-800 flex items-center gap-2">
-        <span class="text-emerald-500">
-          <i class="fas fa-utensils"></i>
-        </span>
+        <span class="text-emerald-500"><i class="fas fa-utensils"></i></span>
         QR-Order
       </div>
 
       <nav class="flex-1 mt-4">
-        <a href="/admin" class="sidebar-item flex items-center py-3 px-6 hover:bg-gray-800">
+        <a href="/admin" class="sidebar-item flex items-center py-3 px-6">
           <i class="fas fa-chart-line mr-3"></i> Dashboard
         </a>
 
@@ -79,39 +77,33 @@
           <i class="fas fa-hamburger mr-3"></i> Manage Menu
         </a>
 
-        <a href="/admin/qr" class="sidebar-item flex items-center py-3 px-6 hover:bg-gray-800">
+        <a href="/admin/qr" class="sidebar-item flex items-center py-3 px-6">
           <i class="fas fa-th-large mr-3"></i> Tables & QRs
         </a>
 
-        <a href="/admin/kitchen-users" class="sidebar-item flex items-center py-3 px-6 hover:bg-gray-800">
+        <a href="/admin/kitchen-users" class="sidebar-item flex items-center py-3 px-6">
           <i class="fas fa-utensils mr-3"></i> Kitchen Users
         </a>
 
-        <a href="/admin/profile" class="sidebar-item flex items-center py-3 px-6 hover:bg-gray-800">
+        <a href="/admin/profile" class="sidebar-item flex items-center py-3 px-6">
           <i class="fas fa-user mr-3"></i> Profile
         </a>
       </nav>
 
       <div class="p-4 border-t border-gray-800">
-        <a
-          href="/logout"
-          class="block w-full text-center bg-red-600 hover:bg-red-700 py-2 rounded-lg"
-        >
+        <a href="/logout" class="block w-full text-center bg-red-600 hover:bg-red-700 py-2 rounded-lg">
           <i class="fas fa-sign-out-alt"></i> Logout
         </a>
       </div>
     </aside>
 
-    <!-- MAIN CONTENT -->
+    <!-- MAIN -->
     <main class="flex-1 p-6 overflow-y-auto">
 
       <!-- HEADER -->
       <div class="flex justify-between mb-6">
         <h2 class="text-3xl font-bold">Menu Management</h2>
-        <button
-          onclick="openAddModal()"
-          class="bg-emerald-600 text-white px-6 py-3 rounded"
-        >
+        <button onclick="openAddModal()" class="bg-emerald-600 text-white px-6 py-3 rounded">
           <i class="fas fa-plus"></i> Add Dish
         </button>
       </div>
@@ -124,7 +116,7 @@
         <button onclick="setCategory(this, 'Beverages')" class="category-tab">Beverages</button>
       </div>
 
-      <!-- QUICK MENU TEMPLATE -->
+      <!-- QUICK TEMPLATES -->
       <div class="bg-white p-5 rounded-xl shadow mb-6">
         <h3 class="font-bold text-lg mb-2">⚡ Quick Menu Templates</h3>
         <p class="text-sm text-gray-500 mb-4">
@@ -140,7 +132,7 @@
         </div>
       </div>
 
-      <!-- SEARCH & FILTER -->
+      <!-- SEARCH + FILTER -->
       <div class="flex gap-3 mb-6">
         <input
           id="menuSearch"
@@ -171,8 +163,85 @@
     </main>
   </div>
 
-  <!-- MODALS (ADD / EDIT / ORDER) -->
-  <!-- Your modals remain unchanged -->
+  <!-- ADD DISH MODAL -->
+  <div id="item-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl w-full max-w-md p-6 relative">
+      <button onclick="closeAddModal()" class="absolute top-4 right-4 text-xl">&times;</button>
+
+      <h3 class="text-xl font-bold mb-6">Add Dish</h3>
+
+      <form id="menu-form" method="POST" enctype="multipart/form-data" class="space-y-5">
+        <input name="name" placeholder="Dish Name" required class="w-full border px-4 py-3 rounded-xl" />
+
+        <div class="grid grid-cols-2 gap-4">
+          <input name="price" type="number" placeholder="Price ₹" required class="border px-4 py-3 rounded-xl" />
+
+          <select name="category" class="border px-4 py-3 rounded-xl">
+            <option>Starters</option>
+            <option>Main Course</option>
+            <option>Beverages</option>
+          </select>
+        </div>
+
+        <input name="image" type="file" accept="image/*" required />
+
+        <button class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold">
+          Save Dish
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- EDIT MODAL -->
+  <div id="edit-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl w-full max-w-md p-6 relative">
+      <button onclick="closeEditModal()" class="absolute top-4 right-4 text-xl">&times;</button>
+
+      <h3 class="text-xl font-bold mb-4">Edit Dish</h3>
+
+      <form id="edit-form" class="space-y-4">
+        <input type="hidden" id="edit-id" />
+
+        <input id="edit-name" type="text" required class="w-full border p-3 rounded" />
+
+        <select id="edit-category" class="w-full border p-3 rounded">
+          <option>Starters</option>
+          <option>Main Course</option>
+          <option>Beverages</option>
+        </select>
+
+        <input id="edit-price" type="number" required class="w-full border p-3 rounded" />
+
+        <input id="edit-image" type="file" accept="image/*" />
+
+        <button class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold">
+          Save Changes
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ADD TO ORDER MODAL -->
+  <div id="addToOrderModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+    <div class="bg-white rounded-xl w-full max-w-sm p-6">
+      <h3 id="modal-item-name" class="text-lg font-bold mb-2"></h3>
+
+      <input
+        type="number"
+        id="modal-qty"
+        min="1"
+        value="1"
+        class="w-full border px-4 py-2 rounded-lg mb-4"
+      />
+
+      <div class="flex justify-end gap-3">
+        <button onclick="closeAddToOrderModal()">Cancel</button>
+        <button onclick="confirmAddToOrder()" class="bg-emerald-600 text-white px-4 py-2 rounded">
+          Add Item
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- JS -->
   <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
