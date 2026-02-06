@@ -193,33 +193,61 @@
   </div>
 
   <!-- EDIT MODAL -->
-  <div id="edit-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-    <div class="bg-white rounded-xl w-full max-w-md p-6 relative">
-      <button onclick="closeEditModal()" class="absolute top-4 right-4 text-xl">&times;</button>
+<div id="edit-modal"
+     class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
 
-      <h3 class="text-xl font-bold mb-4">Edit Dish</h3>
+  <div class="bg-white rounded-xl w-full max-w-md p-6 relative">
+    <button onclick="closeEditModal()"
+            class="absolute top-4 right-4 text-xl">&times;</button>
 
-      <form id="edit-form" class="space-y-4">
-        <input type="hidden" id="edit-id" />
+    <h3 class="text-xl font-bold mb-4">Edit Dish</h3>
 
-        <input id="edit-name" type="text" required class="w-full border p-3 rounded" />
+    <form id="edit-form" class="space-y-4" enctype="multipart/form-data">
 
-        <select id="edit-category" class="w-full border p-3 rounded">
-          <option>Starters</option>
-          <option>Main Course</option>
-          <option>Beverages</option>
-        </select>
+      <!-- IMPORTANT -->
+      <input type="hidden" id="edit-id" name="id" />
 
-        <input id="edit-price" type="number" required class="w-full border p-3 rounded" />
+      <input
+        id="edit-name"
+        name="name"
+        type="text"
+        required
+        class="w-full border p-3 rounded"
+      />
 
-        <input id="edit-image" type="file" accept="image/*" />
+      <select
+        id="edit-category"
+        name="category"
+        class="w-full border p-3 rounded">
+        <option>Starters</option>
+        <option>Main Course</option>
+        <option>Beverages</option>
+      </select>
 
-        <button class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold">
-          Save Changes
-        </button>
-      </form>
-    </div>
+      <input
+        id="edit-price"
+        name="price"
+        type="number"
+        step="0.01"
+        required
+        class="w-full border p-3 rounded"
+      />
+
+      <input
+        id="edit-image"
+        name="image"
+        type="file"
+        accept="image/*"
+      />
+
+      <button
+        class="w-full bg-emerald-600 hover:bg-emerald-700
+               text-white py-3 rounded-xl font-bold">
+        Save Changes
+      </button>
+    </form>
   </div>
+</div>
 
   <!-- ADD TO ORDER MODAL -->
   <div id="addToOrderModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
