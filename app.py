@@ -1022,44 +1022,30 @@ def import_menu_template():
 @app.route("/api/menu/<int:item_id>", methods=["PUT"])
 @login_required("admin")
 def update_menu_item(item_id):
-    name = request.form.get("name")
-    price = request.form.get("price")
-    category = request.form.get("category")
-    image = request.files.get("image")
+    name = request.form.get("name", "").strip()
+    category = request.form.get("category", "").strip()
+    price_raw = request.form.get("price")
 
-    if image:
-        result = cloudinary.uploader.upload(
-            image,
-            folder="menu_images"
-        )
-        image_url = result["secure_url"]
+    # 🛡️ VALIDATION
+    if not name:
+        return jsonify({"error": "Name is required"}), 400
 
-        execute(sql("""
-            UPDATE menu
-            SET name=?, price=?, category=?, image=?
-            WHERE id=? AND restaurant_id=?
-        """), (
-            name,
-            float(price),
-            category,
-            image_url,
-            item_id,
-            session["restaurant_id"]
-        ))
+    try:
+        price = float(price_raw) if price_raw not in (None, "") else 0.0
+    except ValueError:
+        return jsonify({"error": "Invalid price"}), 400
 
-    else:
-        execute(sql("""
-            UPDATE menu
-            SET name=?, price=?, category=?
-            WHERE id=? AND restaurant_id=?
-        """), (
-            name,
-            float(price),
-            category,
-            item_id,
-            session["restaurant_id"]
-        ))
-
+    execute(sql("""
+        UPDATE menu
+        SET name = ?, price = ?, category = ?
+        WHERE id = ? AND restaurant_id = ?
+    """), (
+        name,
+        price,
+        category,
+        item_id,
+        session["restaurant_id"]
+    ))
 
     commit()
     return jsonify({"success": True})

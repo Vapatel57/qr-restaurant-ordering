@@ -11,27 +11,38 @@
     <!-- FontAwesome -->
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
     <style>
         .category-tab {
-        padding: 0.5rem 1rem;
-        border-radius: 0.5rem;
-        background-color: #f3f4f6; /* gray-100 */
-        font-weight: 600;
-        font-size: 0.875rem;
-        color: #374151; /* gray-700 */
-        transition: all 0.2s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            background-color: #f3f4f6;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #374151;
+            transition: all 0.2s ease;
         }
-
         .category-tab:hover {
-        background-color: #e5e7eb; /* gray-200 */
+            background-color: #e5e7eb;
         }
-
         .active-tab {
-        background-color: #10b981; /* emerald-500 */
-        color: white;
+            background-color: #10b981;
+            color: white;
         }
         .sidebar-item:hover { background-color: #374151; }
         .active-nav { border-left: 4px solid #10b981; background-color: #374151; }
+
+        .template-btn {
+            padding: 0.4rem 0.9rem;
+            border-radius: 9999px;
+            background: #f3f4f6;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        .template-btn:hover {
+            background: #10b981;
+            color: white;
+        }
     </style>
 </head>
 
@@ -46,23 +57,25 @@
         </div>
 
         <nav class="flex-1 mt-4">
-            <a href="/admin" class="sidebar-item flex items-center py-3 px-6 hover:bg-gray-800">
+            <a href="/admin" class="sidebar-item flex items-center py-3 px-6">
                 <i class="fas fa-chart-line mr-3"></i> Dashboard
             </a>
 
-            <a href="/menu" class="sidebar-item active-nav flex items-center py-3 px-6 ">
+            <a href="/menu" class="sidebar-item active-nav flex items-center py-3 px-6">
                 <i class="fas fa-hamburger mr-3"></i> Manage Menu
             </a>
 
-            <a href="/admin/qr" class="sidebar-item flex items-center py-3 px-6 hover:bg-gray-800">
+            <a href="/admin/qr" class="sidebar-item flex items-center py-3 px-6">
                 <i class="fas fa-th-large mr-3"></i> Tables & QRs
             </a>
-            <a href="/admin/kitchen-users" class="sidebar-item flex items-center py-3 px-6 hover:bg-gray-800">
+
+            <a href="/admin/kitchen-users" class="sidebar-item flex items-center py-3 px-6">
                 <i class="fas fa-utensils mr-3"></i> Kitchen Users
             </a>
-            <a href="/admin/profile" class="flex items-center py-3 px-6 hover:bg-gray-800 hover:bg-gray-800">
-            <i class="fas fa-user mr-3"></i> Profile
-        </a>
+
+            <a href="/admin/profile" class="sidebar-item flex items-center py-3 px-6">
+                <i class="fas fa-user mr-3"></i> Profile
+            </a>
         </nav>
 
         <div class="p-4 border-t border-gray-800">
@@ -76,87 +89,61 @@
     <!-- MAIN -->
     <main class="flex-1 p-6 overflow-y-auto">
 
+        <!-- HEADER -->
         <div class="flex justify-between mb-6">
             <h2 class="text-3xl font-bold">Menu Management</h2>
-
             <button onclick="openAddModal()"
                     class="bg-emerald-600 text-white px-6 py-3 rounded">
                 <i class="fas fa-plus"></i> Add Dish
             </button>
         </div>
 
-        <!-- FILTERS -->
-        <div class="flex gap-3 mb-6">
-           <div class="flex gap-2 mb-6" id="categoryTabs">
-    <button
-        onclick="setCategory(this, '')"
-        class="category-tab active-tab">
-        All
-    </button>
-
-    <button
-        onclick="setCategory(this, 'Starters')"
-        class="category-tab">
-        Starters
-    </button>
-
-    <button
-        onclick="setCategory(this, 'Main Course')"
-        class="category-tab">
-        Main Course
-    </button>
-
-    <button
-        onclick="setCategory(this, 'Beverages')"
-        class="category-tab">
-        Beverages
-    </button>
-</div>
-
+        <!-- CATEGORY TABS -->
+        <div class="flex gap-2 mb-6" id="categoryTabs">
+            <button onclick="setCategory(this, '')" class="category-tab active-tab">All</button>
+            <button onclick="setCategory(this, 'Starters')" class="category-tab">Starters</button>
+            <button onclick="setCategory(this, 'Main Course')" class="category-tab">Main Course</button>
+            <button onclick="setCategory(this, 'Beverages')" class="category-tab">Beverages</button>
         </div>
+
         <!-- QUICK MENU TEMPLATE -->
-<div class="bg-white p-5 rounded-xl shadow mb-6">
-    <h3 class="font-bold text-lg mb-2">⚡ Quick Menu Templates</h3>
-    <p class="text-sm text-gray-500 mb-4">
-        Auto-add popular dishes. You can edit or delete them later.
-    </p>
+        <div class="bg-white p-5 rounded-xl shadow mb-6">
+            <h3 class="font-bold text-lg mb-1">⚡ Quick Menu Templates</h3>
+            <p class="text-sm text-gray-500 mb-4">
+                Auto-add popular dishes. You can edit or delete them later.
+            </p>
 
-    <div class="flex flex-wrap gap-3">
-        <button onclick="importTemplate('punjabi')" class="template-btn">Punjabi</button>
-        <button onclick="importTemplate('gujarati')" class="template-btn">Gujarati</button>
-        <button onclick="importTemplate('south_indian')" class="template-btn">South Indian</button>
-        <button onclick="importTemplate('chinese')" class="template-btn">Chinese</button>
-        <button onclick="importTemplate('pizza')" class="template-btn">Pizza / Cafe</button>
-    </div>
-</div>
-<!-- SEARCH + FILTER -->
-<div class="flex gap-3 mb-6">
-    <input
-        id="menuSearch"
-        type="text"
-        placeholder="Search dish..."
-        class="w-full border px-4 py-2 rounded-lg"
-        oninput="applyFilters()"
-    />
+            <div class="flex flex-wrap gap-3">
+                <button onclick="importTemplate('punjabi')" class="template-btn">Punjabi</button>
+                <button onclick="importTemplate('gujarati')" class="template-btn">Gujarati</button>
+                <button onclick="importTemplate('south_indian')" class="template-btn">South Indian</button>
+                <button onclick="importTemplate('chinese')" class="template-btn">Chinese</button>
+                <button onclick="importTemplate('pizza')" class="template-btn">Pizza / Cafe</button>
+            </div>
+        </div>
 
-    <select
-        id="categoryFilter"
-        class="border px-4 py-2 rounded-lg"
-        onchange="applyFilters()"
-    >
-        <option value="">All</option>
-        <option value="Starters">Starters</option>
-        <option value="Main Course">Main Course</option>
-        <option value="Beverages">Beverages</option>
-    </select>
-</div>
+        <!-- SEARCH + FILTER -->
+        <div class="flex gap-3 mb-6">
+            <input
+                id="menuSearch"
+                type="text"
+                placeholder="Search dish..."
+                class="w-full border px-4 py-2 rounded-lg"
+                oninput="applyFilters()"
+            />
 
-<!-- GRID -->
-<div id="menu-grid"
-     class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-</div>
+            <select
+                id="categoryFilter"
+                class="border px-4 py-2 rounded-lg"
+                onchange="applyFilters()">
+                <option value="">All</option>
+                <option value="Starters">Starters</option>
+                <option value="Main Course">Main Course</option>
+                <option value="Beverages">Beverages</option>
+            </select>
+        </div>
 
-        <!-- GRID -->
+        <!-- MENU GRID -->
         <div id="menu-grid"
              class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         </div>
@@ -164,166 +151,11 @@
     </main>
 </div>
 
-<!-- ADD DISH MODAL -->
+<!-- MODALS -->
+{% include "partials/menu_add_modal.html" %}
+{% include "partials/menu_edit_modal.html" %}
+{% include "partials/add_to_order_modal.html" %}
 
-<div id="item-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-
-  <div class="bg-white rounded-xl w-full max-w-md p-6 relative">
-
-    <!-- ❌ CLOSE BUTTON -->
-    <button onclick="closeAddModal()"
-        class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl font-bold">
-        &times;
-    </button>
-
-    <h3 class="text-xl font-bold mb-6">Add Dish</h3>
-
-    <form id="menu-form" method="POST" enctype="multipart/form-data" class="space-y-5">
-
-        <!-- DISH NAME (FULL WIDTH) -->
-        <div>
-            <label class="block text-sm font-semibold mb-1">Dish Name</label>
-            <input
-                name="name"
-                placeholder="e.g. Butter Chicken"
-                required
-                class="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none">
-        </div>
-
-        <!-- PRICE + CATEGORY (SIDE BY SIDE) -->
-        <div class="grid grid-cols-2 gap-4">
-
-            <div>
-                <label class="block text-sm font-semibold mb-1">Price (₹)</label>
-                <input
-                    name="price"
-                    type="number"
-                    placeholder="e.g. 250"
-                    required
-                    class="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none">
-            </div>
-
-            <div>
-                <label class="block text-sm font-semibold mb-1">Category</label>
-                <select
-                    name="category"
-                    class="w-full border rounded-xl px-4 py-3 bg-white focus:ring-2 focus:ring-emerald-500 outline-none">
-                    <option>Starters</option>
-                    <option>Main Course</option>
-                    <option>Beverages</option>
-                </select>
-            </div>
-
-        </div>
-
-        <!-- IMAGE -->
-        <div>
-            <label class="block text-sm font-semibold mb-1">Dish Image</label>
-            <input
-                name="image"
-                type="file"
-                accept="image/*"
-                required
-                class="w-full">
-        </div>
-
-        <!-- SAVE BUTTON -->
-        <button
-            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold transition">
-            Save Dish
-        </button>
-
-    </form>
-  </div>
-</div>
-
-<!-- EDIT MODAL -->
-<div id="edit-modal"
-     class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-
-    <div class="bg-white rounded-xl w-full max-w-md p-6 relative">
-
-        <!-- CLOSE -->
-        <button onclick="closeEditModal()"
-                class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-xl font-bold">
-            &times;
-        </button>
-
-        <h3 class="text-xl font-bold mb-4">Edit Dish</h3>
-
-        <form id="edit-form" class="space-y-4">
-
-            <input type="hidden" id="edit-id">
-
-            <div>
-                <label class="text-sm font-semibold">Dish Name</label>
-                <input id="edit-name"
-                       type="text"
-                       class="w-full border p-3 rounded"
-                       required>
-            </div>
-
-            <div>
-                <label class="text-sm font-semibold">Category</label>
-                <select id="edit-category"
-                        class="w-full border p-3 rounded">
-                    <option>Starters</option>
-                    <option>Main Course</option>
-                    <option>Beverages</option>
-                </select>
-            </div>
-
-            <div>
-                <label class="text-sm font-semibold">Price</label>
-                <input id="edit-price"
-                       type="number"
-                       class="w-full border p-3 rounded"
-                       required>
-            </div>
-
-            <div>
-                <label class="text-sm font-semibold">Dish Image</label>
-                <input id="edit-image"
-                       type="file"
-                       accept="image/*">
-            </div>
-
-            <button type="submit"
-                    class="w-full bg-emerald-600 hover:bg-emerald-700
-                           text-white py-3 rounded-xl font-bold">
-                Save Changes
-            </button>
-
-        </form>
-    </div>
-</div>
-<!-- ADD TO ORDER MODAL -->
-<div id="addToOrderModal"
-     class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-
-  <div class="bg-white rounded-xl w-full max-w-sm p-6">
-    <h3 class="text-lg font-bold mb-2" id="modal-item-name"></h3>
-    <p class="text-sm text-gray-500 mb-4">Enter quantity</p>
-
-    <input type="number"
-           id="modal-qty"
-           min="1"
-           value="1"
-           class="w-full border rounded-lg px-4 py-2 mb-4">
-
-    <div class="flex justify-end gap-3">
-      <button onclick="closeAddToOrderModal()"
-              class="px-4 py-2 rounded text-gray-600">
-        Cancel
-      </button>
-
-      <button onclick="confirmAddToOrder()"
-              class="bg-emerald-600 text-white px-4 py-2 rounded-lg">
-        Add Item
-      </button>
-    </div>
-  </div>
-</div>
 <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
 </body>
 </html>
