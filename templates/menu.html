@@ -1,156 +1,180 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Menu Management | QR-Order</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <title>Menu Management | QR-Order</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <!-- Tailwind -->
-    <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
 
-    <!-- FontAwesome -->
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <!-- FontAwesome -->
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+  />
 
-    <style>
-        .category-tab {
-            padding: 0.5rem 1rem;
-            border-radius: 0.5rem;
-            background-color: #f3f4f6;
-            font-weight: 600;
-            font-size: 0.875rem;
-            color: #374151;
-            transition: all 0.2s ease;
-        }
-        .category-tab:hover {
-            background-color: #e5e7eb;
-        }
-        .active-tab {
-            background-color: #10b981;
-            color: white;
-        }
-        .sidebar-item:hover { background-color: #374151; }
-        .active-nav { border-left: 4px solid #10b981; background-color: #374151; }
+  <style>
+    .category-tab {
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      background-color: #f3f4f6;
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: #374151;
+      transition: all 0.2s ease;
+    }
 
-        .template-btn {
-            padding: 0.4rem 0.9rem;
-            border-radius: 9999px;
-            background: #f3f4f6;
-            font-weight: 600;
-            font-size: 0.875rem;
-        }
-        .template-btn:hover {
-            background: #10b981;
-            color: white;
-        }
-    </style>
+    .category-tab:hover {
+      background-color: #e5e7eb;
+    }
+
+    .active-tab {
+      background-color: #10b981;
+      color: white;
+    }
+
+    .sidebar-item:hover {
+      background-color: #374151;
+    }
+
+    .active-nav {
+      border-left: 4px solid #10b981;
+      background-color: #374151;
+    }
+
+    .template-btn {
+      background-color: #e5e7eb;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      transition: all 0.2s ease;
+    }
+
+    .template-btn:hover {
+      background-color: #d1d5db;
+    }
+  </style>
 </head>
 
 <body class="bg-gray-50">
-
-<div class="flex h-screen">
+  <div class="flex h-screen">
 
     <!-- SIDEBAR -->
     <aside class="w-64 bg-gray-900 text-white hidden md:flex flex-col">
-        <div class="p-6 text-2xl font-bold border-b border-gray-800 flex items-center gap-2">
-            <span class="text-emerald-500"><i class="fas fa-utensils"></i></span> QR-Order
-        </div>
+      <div class="p-6 text-2xl font-bold border-b border-gray-800 flex items-center gap-2">
+        <span class="text-emerald-500">
+          <i class="fas fa-utensils"></i>
+        </span>
+        QR-Order
+      </div>
 
-        <nav class="flex-1 mt-4">
-            <a href="/admin" class="sidebar-item flex items-center py-3 px-6">
-                <i class="fas fa-chart-line mr-3"></i> Dashboard
-            </a>
+      <nav class="flex-1 mt-4">
+        <a href="/admin" class="sidebar-item flex items-center py-3 px-6 hover:bg-gray-800">
+          <i class="fas fa-chart-line mr-3"></i> Dashboard
+        </a>
 
-            <a href="/menu" class="sidebar-item active-nav flex items-center py-3 px-6">
-                <i class="fas fa-hamburger mr-3"></i> Manage Menu
-            </a>
+        <a href="/menu" class="sidebar-item active-nav flex items-center py-3 px-6">
+          <i class="fas fa-hamburger mr-3"></i> Manage Menu
+        </a>
 
-            <a href="/admin/qr" class="sidebar-item flex items-center py-3 px-6">
-                <i class="fas fa-th-large mr-3"></i> Tables & QRs
-            </a>
+        <a href="/admin/qr" class="sidebar-item flex items-center py-3 px-6 hover:bg-gray-800">
+          <i class="fas fa-th-large mr-3"></i> Tables & QRs
+        </a>
 
-            <a href="/admin/kitchen-users" class="sidebar-item flex items-center py-3 px-6">
-                <i class="fas fa-utensils mr-3"></i> Kitchen Users
-            </a>
+        <a href="/admin/kitchen-users" class="sidebar-item flex items-center py-3 px-6 hover:bg-gray-800">
+          <i class="fas fa-utensils mr-3"></i> Kitchen Users
+        </a>
 
-            <a href="/admin/profile" class="sidebar-item flex items-center py-3 px-6">
-                <i class="fas fa-user mr-3"></i> Profile
-            </a>
-        </nav>
+        <a href="/admin/profile" class="sidebar-item flex items-center py-3 px-6 hover:bg-gray-800">
+          <i class="fas fa-user mr-3"></i> Profile
+        </a>
+      </nav>
 
-        <div class="p-4 border-t border-gray-800">
-            <a href="/logout"
-               class="block w-full text-center bg-red-600 hover:bg-red-700 py-2 rounded-lg">
-                <i class="fas fa-sign-out-alt"></i> Logout
-            </a>
-        </div>
+      <div class="p-4 border-t border-gray-800">
+        <a
+          href="/logout"
+          class="block w-full text-center bg-red-600 hover:bg-red-700 py-2 rounded-lg"
+        >
+          <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+      </div>
     </aside>
 
-    <!-- MAIN -->
+    <!-- MAIN CONTENT -->
     <main class="flex-1 p-6 overflow-y-auto">
 
-        <!-- HEADER -->
-        <div class="flex justify-between mb-6">
-            <h2 class="text-3xl font-bold">Menu Management</h2>
-            <button onclick="openAddModal()"
-                    class="bg-emerald-600 text-white px-6 py-3 rounded">
-                <i class="fas fa-plus"></i> Add Dish
-            </button>
+      <!-- HEADER -->
+      <div class="flex justify-between mb-6">
+        <h2 class="text-3xl font-bold">Menu Management</h2>
+        <button
+          onclick="openAddModal()"
+          class="bg-emerald-600 text-white px-6 py-3 rounded"
+        >
+          <i class="fas fa-plus"></i> Add Dish
+        </button>
+      </div>
+
+      <!-- CATEGORY TABS -->
+      <div class="flex gap-2 mb-6" id="categoryTabs">
+        <button onclick="setCategory(this, '')" class="category-tab active-tab">All</button>
+        <button onclick="setCategory(this, 'Starters')" class="category-tab">Starters</button>
+        <button onclick="setCategory(this, 'Main Course')" class="category-tab">Main Course</button>
+        <button onclick="setCategory(this, 'Beverages')" class="category-tab">Beverages</button>
+      </div>
+
+      <!-- QUICK MENU TEMPLATE -->
+      <div class="bg-white p-5 rounded-xl shadow mb-6">
+        <h3 class="font-bold text-lg mb-2">⚡ Quick Menu Templates</h3>
+        <p class="text-sm text-gray-500 mb-4">
+          Auto-add popular dishes. You can edit or delete them later.
+        </p>
+
+        <div class="flex flex-wrap gap-3">
+          <button onclick="importTemplate('punjabi')" class="template-btn">Punjabi</button>
+          <button onclick="importTemplate('gujarati')" class="template-btn">Gujarati</button>
+          <button onclick="importTemplate('south_indian')" class="template-btn">South Indian</button>
+          <button onclick="importTemplate('chinese')" class="template-btn">Chinese</button>
+          <button onclick="importTemplate('pizza')" class="template-btn">Pizza / Cafe</button>
         </div>
+      </div>
 
-        <!-- CATEGORY TABS -->
-        <div class="flex gap-2 mb-6" id="categoryTabs">
-            <button onclick="setCategory(this, '')" class="category-tab active-tab">All</button>
-            <button onclick="setCategory(this, 'Starters')" class="category-tab">Starters</button>
-            <button onclick="setCategory(this, 'Main Course')" class="category-tab">Main Course</button>
-            <button onclick="setCategory(this, 'Beverages')" class="category-tab">Beverages</button>
-        </div>
+      <!-- SEARCH & FILTER -->
+      <div class="flex gap-3 mb-6">
+        <input
+          id="menuSearch"
+          type="text"
+          placeholder="Search dish..."
+          class="w-full border px-4 py-2 rounded-lg"
+          oninput="applyFilters()"
+        />
 
-        <!-- QUICK MENU TEMPLATE -->
-        <div class="bg-white p-5 rounded-xl shadow mb-6">
-            <h3 class="font-bold text-lg mb-1">⚡ Quick Menu Templates</h3>
-            <p class="text-sm text-gray-500 mb-4">
-                Auto-add popular dishes. You can edit or delete them later.
-            </p>
+        <select
+          id="categoryFilter"
+          class="border px-4 py-2 rounded-lg"
+          onchange="applyFilters()"
+        >
+          <option value="">All</option>
+          <option value="Starters">Starters</option>
+          <option value="Main Course">Main Course</option>
+          <option value="Beverages">Beverages</option>
+        </select>
+      </div>
 
-            <div class="flex flex-wrap gap-3">
-                <button onclick="importTemplate('punjabi')" class="template-btn">Punjabi</button>
-                <button onclick="importTemplate('gujarati')" class="template-btn">Gujarati</button>
-                <button onclick="importTemplate('south_indian')" class="template-btn">South Indian</button>
-                <button onclick="importTemplate('chinese')" class="template-btn">Chinese</button>
-                <button onclick="importTemplate('pizza')" class="template-btn">Pizza / Cafe</button>
-            </div>
-        </div>
-
-        <!-- SEARCH + FILTER -->
-        <div class="flex gap-3 mb-6">
-            <input
-                id="menuSearch"
-                type="text"
-                placeholder="Search dish..."
-                class="w-full border px-4 py-2 rounded-lg"
-                oninput="applyFilters()"
-            />
-
-            <select
-                id="categoryFilter"
-                class="border px-4 py-2 rounded-lg"
-                onchange="applyFilters()">
-                <option value="">All</option>
-                <option value="Starters">Starters</option>
-                <option value="Main Course">Main Course</option>
-                <option value="Beverages">Beverages</option>
-            </select>
-        </div>
-
-        <!-- MENU GRID -->
-        <div id="menu-grid"
-             class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        </div>
+      <!-- MENU GRID -->
+      <div
+        id="menu-grid"
+        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+      ></div>
 
     </main>
-</div>
+  </div>
 
-<script src="{{ url_for('static', filename='js/menu.js') }}"></script>
+  <!-- MODALS (ADD / EDIT / ORDER) -->
+  <!-- Your modals remain unchanged -->
+
+  <!-- JS -->
+  <script src="{{ url_for('static', filename='js/menu.js') }}"></script>
 </body>
 </html>
