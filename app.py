@@ -115,45 +115,41 @@ def login():
                 SET otp_code=?, otp_expires_at=NOW() + INTERVAL '10 minutes'
                 WHERE username=?
             """), (otp, email))
-
             commit()
-            send_otp_email(email, otp)
 
-            session.clear()
+            send_otp_email(email, otp)
             session["pending_email"] = email
             return redirect("/verify-email")
 
-        # ===============================
+        # ✅ DEBUG (SAFE — user EXISTS here)
+        print(
+            "LOGIN DEBUG →",
+            user["username"],
+            user["role"],
+            "verified:", user["is_verified"]
+        )
+
         # ✅ LOGIN SUCCESS
-        # ===============================
         session.clear()
         session["user"] = user["username"]
-
-        SUPERADMIN_EMAIL = os.getenv("SUPERADMIN_EMAIL")
-
-        # 🔥 SUPER ADMIN OVERRIDE (OPTION 2)
-        if SUPERADMIN_EMAIL and user["username"] == SUPERADMIN_EMAIL:
-            session["role"] = "superadmin"
-            session["restaurant_id"] = None
-            return redirect("/platform/restaurants")
-
-        # 👤 NORMAL USERS
         session["role"] = user["role"]
         session["restaurant_id"] = user["restaurant_id"]
 
+        # 🔁 ROLE-BASED REDIRECT
+        if user["role"] == "superadmin":
+            return redirect("/platform/restaurants")
+
         if user["role"] == "admin":
             return redirect("/admin")
-        elif user["role"] == "kitchen":
-            return redirect("/kitchen")
-        else:
-            return redirect("/login")
-    print("LOGIN DEBUG →",
-      user["username"],
-      user["role"],
-      "verified:", user["is_verified"])
 
+        if user["role"] == "kitchen":
+            return redirect("/kitchen")
+
+        # 🚨 fallback
+        return redirect("/login")
+
+    # ✅ GET /login
     return render_template("login.html")
-    
 
 @app.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
