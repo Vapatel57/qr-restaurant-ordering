@@ -1338,15 +1338,17 @@ def api_orders():
     orders = fetchall(sql("""
         SELECT *
         FROM orders
-        WHERE restaurant_id=?
-        ORDER BY id DESC
-        LIMIT 50
+        WHERE restaurant_id = ?
+        AND created_at >= CURRENT_DATE
+        AND created_at < CURRENT_DATE + INTERVAL '1 day'
+        ORDER BY created_at DESC
     """), (rid,))
 
     return jsonify([
         {k: json_safe(v) for k, v in dict(o).items()}
         for o in orders
     ])
+
 @app.route("/api/kitchen/orders")
 @login_required("kitchen")
 def kitchen_orders():
