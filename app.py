@@ -1367,6 +1367,56 @@ def kitchen_orders():
         for o in orders
     ])
 
+# =================================================
+# AI Agent
+# =================================================
+@app.route("/api/daily-report", methods=["GET"])
+def daily_report():
+
+    if request.headers.get("Authorization") != "Bearer supersecret":
+        return jsonify({"error": "Unauthorized"}), 401
+
+    today = datetime.date.today()
+
+    orders = fetchall("""
+        SELECT table_number, dish_name, total, wait_time
+        FROM orders
+        WHERE DATE(created_at)=?
+        AND status='Closed'
+    """, (today,))
+
+    if not orders:
+        return jsonify({
+            "revenue": 0,
+            "orders": 0,
+            "top_dish": None,
+            "avg_wait": 0,
+            "slow_table": None
+        })
+
+    total_revenue = sum(o["total"] for o in orders)
+    total_orders = len(orders)
+
+    # Top dish
+    dish_count = {}
+    for o in orders:
+        dish_count[o["dish_name"]] = dish_count.get(o["dish_name"], 0) + 1
+
+    top_dish = max(dish_count, key=dish_count.get)
+
+    # Average wait
+    avg_wait = sum(o["wait_time"] for o in orders) / total_orders
+
+    # Table with highest wait
+    slow_table = max(orders, key=lambda x: x["wait_time"])["table_number"]
+
+    return jsonify({
+        "revenue": total_revenue,
+        "orders": total_orders,
+        "top_dish": top_dish,
+        "avg_wait": round(avg_wait, 2),
+        "slow_table": slow_table
+    })
 
 # --------------------------------------------------
 # ROOT
