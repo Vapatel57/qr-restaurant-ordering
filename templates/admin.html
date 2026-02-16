@@ -1,21 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Admin Dashboard | QR-Order</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>Admin Dashboard | QR-Order</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
 <body class="bg-gray-100 font-sans">
 
-<div class="flex h-screen overflow-hidden">
+<div class="flex min-h-screen bg-gray-100">
+
+    <!-- MOBILE OVERLAY -->
+    <div id="sidebar-overlay"
+         onclick="toggleSidebar()"
+         class="fixed inset-0 bg-black/40 hidden z-40 md:hidden"></div>
 
     <!-- SIDEBAR -->
-    <aside class="w-64 bg-gray-900 text-white hidden md:flex flex-col">
+    <aside id="sidebar"
+    class="fixed md:static inset-y-0 left-0 w-64 bg-gray-900 text-white transform -translate-x-full md:translate-x-0 transition duration-200 z-50 flex flex-col">
+
         <div class="p-6 text-2xl font-bold border-b border-gray-800 flex items-center gap-2">
             <span class="text-emerald-500"><i class="fas fa-utensils"></i></span> QR-Order
         </div>
@@ -50,40 +57,47 @@
     <main class="flex-1 overflow-y-auto">
 
         <!-- HEADER -->
-        <header class="bg-white shadow-sm p-4 flex justify-between items-center">
-            <h2 class="text-xl font-semibold">Live Dashboard</h2>
+        <header class="bg-white shadow-sm p-4 flex items-center justify-between sticky top-0 z-40">
+
+            <div class="flex items-center gap-3">
+                <button onclick="toggleSidebar()" class="md:hidden text-2xl">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h2 class="text-xl font-semibold">Live Dashboard</h2>
+            </div>
 
             <button onclick="openHistory()"
-                    class="bg-gray-800 text-white px-4 py-2 rounded text-sm">
-                📅 Show Past Days Orders
+                    class="bg-gray-800 text-white px-3 py-2 rounded text-sm">
+                📅 History
             </button>
         </header>
 
-        <div class="p-6">
+        <div class="p-4 sm:p-6">
 
             <!-- STATS -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div class="bg-white p-6 rounded-xl shadow">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white p-4 sm:p-6 rounded-xl shadow">
                     <p class="text-gray-500 text-sm font-bold uppercase">Orders Today</p>
                     <h3 class="text-3xl font-bold" id="order-count">0</h3>
                 </div>
 
-                <div class="bg-white p-6 rounded-xl shadow">
+                <div class="bg-white p-4 sm:p-6 rounded-xl shadow">
                     <p class="text-gray-500 text-sm font-bold uppercase">Pending</p>
                     <h3 class="text-3xl font-bold text-orange-500" id="pending-count">0</h3>
                 </div>
 
-                <div class="bg-white p-6 rounded-xl shadow">
+                <div class="bg-white p-4 sm:p-6 rounded-xl shadow">
                     <p class="text-gray-500 text-sm font-bold uppercase">Today Revenue</p>
                     <h3 class="text-3xl font-bold text-emerald-600" id="today-revenue">₹0</h3>
                 </div>
             </div>
 
-            <!-- ORDERS TABLE -->
+            <!-- ORDERS -->
             <div class="bg-white rounded-xl shadow overflow-hidden">
                 <div class="p-5 border-b font-bold">Today's Orders</div>
 
-                <table class="w-full text-left">
+                <!-- Desktop Table -->
+                <table class="w-full text-left hidden md:table">
                     <thead class="bg-gray-50 text-sm uppercase">
                         <tr>
                             <th class="p-4">Table</th>
@@ -95,44 +109,19 @@
                     </thead>
                     <tbody id="order-table-body"></tbody>
                 </table>
+
+                <!-- Mobile Cards -->
+                <div id="mobile-orders" class="md:hidden divide-y"></div>
             </div>
         </div>
     </main>
 </div>
 
-<!-- ➕ ADD ITEM MODAL -->
-<div id="add-item-modal"
-     class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-
-    <div class="bg-white p-6 rounded-xl w-full max-w-md">
-        <h3 class="text-lg font-bold mb-4">Add Item to Table</h3>
-
-        <select id="add-item-select"
-                class="w-full border p-2 rounded mb-3"></select>
-
-        <input id="add-item-qty"
-               type="number"
-               min="1"
-               value="1"
-               class="w-full border p-2 rounded mb-4">
-
-        <button onclick="confirmAddItem()"
-                class="w-full bg-emerald-600 text-white py-2 rounded font-bold">
-            Add to Order
-        </button>
-
-        <button onclick="closeAddItem()"
-                class="w-full mt-2 text-gray-500">
-            Cancel
-        </button>
-    </div>
-</div>
-
-<!-- PAST DAYS MODAL (unchanged) -->
+<!-- HISTORY MODAL -->
 <div id="history-modal"
      class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
 
-    <div class="bg-white p-6 rounded-xl w-full max-w-lg">
+    <div class="bg-white p-6 rounded-xl w-[92%] sm:max-w-lg">
         <h3 class="text-xl font-bold mb-4">Past Orders</h3>
 
         <input type="date" id="history-date"
