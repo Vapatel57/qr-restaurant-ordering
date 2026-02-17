@@ -1376,47 +1376,66 @@ def daily_report():
     if request.headers.get("Authorization") != "Bearer supersecret":
         return jsonify({"error": "Unauthorized"}), 401
 
-    query = """
-    WITH today_orders AS (
-        SELECT id, table_no, total
-        FROM orders
-        WHERE status = 'Closed'
-        AND created_at::date = CURRENT_DATE
-    ),
-    today_items AS (
-        SELECT oa.item_name, oa.qty, oa.table_no, oa.order_id
-        FROM order_additions oa
-        JOIN today_orders o ON o.id = oa.order_id
-    ),
-    top_dish AS (
-        SELECT item_name, SUM(qty) AS total_qty
-        FROM today_items
-        GROUP BY item_name
-        ORDER BY total_qty DESC
-        LIMIT 1
-    ),
-    busiest_table AS (
-        SELECT table_no, COUNT(*) AS orders_count
-        FROM today_orders
-        GROUP BY table_no
-        ORDER BY orders_count DESC
-        LIMIT 1
-    )
-    SELECT
-        COALESCE((SELECT SUM(total) FROM today_orders),0),
-        COALESCE((SELECT COUNT(*) FROM today_orders),0),
-        COALESCE((SELECT item_name FROM top_dish),'No orders'),
-        COALESCE((SELECT table_no FROM busiest_table),0);
-    """
+    try:
+        query = """
+        WITH today_orders AS (
+            SELECT id, table_no, total
+            FROM orders
+            WHERE status = 'Closed'
+            AND created_at::date = CURRENT_DATE
+        ),
+        today_items AS (
+            SELECT oa.item_name, oa.qty, oa.table_no, oa.order_id
+            FROM order_additions oa
+            JOIN today_orders o ON o.id = oa.order_id
+        ),
+        top_dish AS (
+            SELECT item_name, SUM(qty) AS total_qty
+            FROM today_items
+            GROUP BY item_name
+            ORDER BY total_qty DESC
+            LIMIT 1
+        ),
+        busiest_table AS (
+            SELECT table_no, COUNT(*) AS orders_count
+            FROM today_orders
+            GROUP BY table_no
+            ORDER BY orders_count DESC
+            LIMIT 1
+        )
+        SELECT
+            COALESCE((SELECT SUM(total) FROM today_orders),0) AS revenue,
+            COALESCE((SELECT COUNT(*) FROM today_orders),0) AS total_orders,
+            COALESCE((SELECT item_name FROM top_dish),'No orders') AS top_dish,
+            COALESCE((SELECT table_no FROM busiest_table),0) AS busiest_table;
+        """
 
-    result = fetchone(query)
+        result = fetchone(query)
 
-    return jsonify({
-        "revenue": float(result[0]),
-        "orders": result[1],
-        "top_dish": result[2],
-        "busiest_table": result[3]
-    })
+        # SAFETY CHECK
+        if not result:
+            return jsonify({
+                "revenue": 0,
+                "orders": 0,
+                "top_dish": "No orders",
+                "busiest_table": 0
+            })
+
+        # Works for tuple or dict
+        revenue = result[0] if isinstance(result, tuple) else result["revenue"]
+        orders = result[1] if isinstance(result, tuple) else result["total_orders"]
+        top_dish = result[2] if isinstance(result, tuple) else result["top_dish"]
+        table = result[3] if isinstance(result, tuple) else result["busiest_table"]
+
+        return jsonify({
+            "revenue": float(revenue),
+            "orders": int(orders),
+            "top_dish": top_dish,
+            "busiest_table": int(table)
+        })
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 # --------------------------------------------------
 # ROOT
