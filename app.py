@@ -1376,46 +1376,46 @@ def daily_report():
     if request.headers.get("Authorization") != "Bearer supersecret":
         return jsonify({"error": "Unauthorized"}), 401
 
-    today = datetime.date.today()
-
-    orders = fetchall("""
-        SELECT table_number, dish_name, total, wait_time
+    query = """
+    WITH today_orders AS (
+        SELECT id, table_no, total
         FROM orders
-        WHERE DATE(created_at)=?
-        AND status='Closed'
-    """, (today,))
+        WHERE status = 'Closed'
+        AND created_at::date = CURRENT_DATE
+    ),
+    today_items AS (
+        SELECT oa.item_name, oa.qty, oa.table_no, oa.order_id
+        FROM order_additions oa
+        JOIN today_orders o ON o.id = oa.order_id
+    ),
+    top_dish AS (
+        SELECT item_name, SUM(qty) AS total_qty
+        FROM today_items
+        GROUP BY item_name
+        ORDER BY total_qty DESC
+        LIMIT 1
+    ),
+    busiest_table AS (
+        SELECT table_no, COUNT(*) AS orders_count
+        FROM today_orders
+        GROUP BY table_no
+        ORDER BY orders_count DESC
+        LIMIT 1
+    )
+    SELECT
+        COALESCE((SELECT SUM(total) FROM today_orders),0),
+        COALESCE((SELECT COUNT(*) FROM today_orders),0),
+        COALESCE((SELECT item_name FROM top_dish),'No orders'),
+        COALESCE((SELECT table_no FROM busiest_table),0);
+    """
 
-    if not orders:
-        return jsonify({
-            "revenue": 0,
-            "orders": 0,
-            "top_dish": None,
-            "avg_wait": 0,
-            "slow_table": None
-        })
-
-    total_revenue = sum(o["total"] for o in orders)
-    total_orders = len(orders)
-
-    # Top dish
-    dish_count = {}
-    for o in orders:
-        dish_count[o["dish_name"]] = dish_count.get(o["dish_name"], 0) + 1
-
-    top_dish = max(dish_count, key=dish_count.get)
-
-    # Average wait
-    avg_wait = sum(o["wait_time"] for o in orders) / total_orders
-
-    # Table with highest wait
-    slow_table = max(orders, key=lambda x: x["wait_time"])["table_number"]
+    result = fetchone(query)
 
     return jsonify({
-        "revenue": total_revenue,
-        "orders": total_orders,
-        "top_dish": top_dish,
-        "avg_wait": round(avg_wait, 2),
-        "slow_table": slow_table
+        "revenue": float(result[0]),
+        "orders": result[1],
+        "top_dish": result[2],
+        "busiest_table": result[3]
     })
 
 # --------------------------------------------------
