@@ -23,6 +23,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from menu_templates import MENU_TEMPLATES
 from decimal import Decimal
 from datetime import datetime
+N8N_FEEDBACK_WEBHOOK = "https://YOUR-N8N-URL/webhook/order-completed"
 def serialize_row(row):
     return {
         k: float(v) if isinstance(v, Decimal) else v
@@ -36,7 +37,21 @@ def json_safe(obj):
     if isinstance(obj, Decimal):
         return float(obj)
     return obj
+def trigger_feedback_agent(order, restaurant):
+    try:
+        payload = {
+            "order_id": order["id"],
+            "customer_name": order.get("customer_name") or f"Table {order['table_no']}",
+            "phone": order.get("customer_phone", ""),   # add later if not present
+            "items": order["items"],
+            "bill": float(order["total"]),
+            "restaurant": restaurant["name"]
+        }
 
+        requests.post(N8N_FEEDBACK_WEBHOOK, json=payload, timeout=3)
+
+    except Exception as e:
+        print("Feedback agent failed:", e)
 # --------------------------------------------------
 # CONFIG
 # --------------------------------------------------
@@ -490,9 +505,12 @@ def customer(restaurant):
 @app.route("/order", methods=["POST"])
 def place_order():
     data = request.get_json()
+
     restaurant_id = data["restaurant_id"]
     table_no = data["table"]
     items = data["items"]
+    customer_name = data.get("customer_name", "")
+    customer_phone = data.get("customer_phone", "")
 
     # 🔎 Find existing OPEN order for table
     existing = fetchone(sql("""
@@ -524,14 +542,16 @@ def place_order():
         combined_items = old_items + new_items
         updated_total = float(existing["total"]) + new_total
 
-        # ✅ Update order
+        # 🔥 ALSO update customer details (important)
         execute(sql("""
             UPDATE orders
-            SET items=?, total=?
+            SET items=?, total=?, customer_name=?, customer_phone=?
             WHERE id=?
         """), (
             json.dumps(combined_items),
             updated_total,
+            customer_name,
+            customer_phone,
             existing["id"]
         ))
 
@@ -558,19 +578,19 @@ def place_order():
     # ===============================
     execute(sql("""
         INSERT INTO orders
-        (restaurant_id, table_no, customer_name, items, total, status, created_at)
+        (restaurant_id, table_no, customer_name, customer_phone, items, total, status, created_at)
         VALUES (?,?,?,?,?, 'Received', CURRENT_TIMESTAMP)
     """), (
         restaurant_id,
         table_no,
-        data.get("customer_name", ""),
+        customer_name,
+        customer_phone,
         json.dumps(new_items),
         new_total
     ))
 
     commit()
     return jsonify({"success": True})
-
 
 @app.route("/api/order/<int:order_id>/close", methods=["POST"])
 @login_required("admin")
@@ -1182,7 +1202,9 @@ def bill(order_id):
     if not order:
         return "Order not found", 404
 
-    # ✅ AUTO CLOSE ORDER WHEN BILL IS GENERATED
+    # ===============================
+    # 🔥 WHEN BILL IS GENERATED → CLOSE ORDER → TRIGGER AI
+    # ===============================
     if order["status"] != "Closed":
         execute(sql("""
             UPDATE orders
@@ -1207,14 +1229,18 @@ def bill(order_id):
             (order_id, session["restaurant_id"])
         )
 
-    # ✅ SAFE PARSE ITEMS
+        # 🔥 TRIGGER FEEDBACK AGENT (ASYNC SAFE)
+        trigger_feedback_agent(order)
+
+    # ===============================
+    # BILL CALCULATION
+    # ===============================
     raw_items = (
         order["items"]
         if isinstance(order["items"], list)
         else json.loads(order["items"] or "[]")
     )
 
-    # ✅ GROUP SAME ITEMS
     grouped = {}
     for i in raw_items:
         key = i["name"]
@@ -1228,7 +1254,6 @@ def bill(order_id):
 
     items = list(grouped.values())
 
-    # ✅ TOTALS
     subtotal = sum(i["price"] * i["qty"] for i in items)
     gst = round(subtotal * 0.05, 2)
     total = round(subtotal + gst, 2)
