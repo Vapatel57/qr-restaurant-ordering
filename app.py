@@ -3,6 +3,7 @@ from flask import (
     session, Response, send_file, jsonify,
     current_app
 )
+import requests
 import uuid
 from flask import url_for
 from flask_dance.contrib.google import google
@@ -577,17 +578,18 @@ def place_order():
     # ✅ CASE 2: CREATE NEW ORDER
     # ===============================
     execute(sql("""
-        INSERT INTO orders
-        (restaurant_id, table_no, customer_name, customer_phone, items, total, status, created_at)
-        VALUES (?,?,?,?,?, 'Received', CURRENT_TIMESTAMP)
-    """), (
-        restaurant_id,
-        table_no,
-        customer_name,
-        customer_phone,
-        json.dumps(new_items),
-        new_total
-    ))
+    INSERT INTO orders
+    (restaurant_id, table_no, customer_name, customer_phone, items, total, status, created_at)
+    VALUES (?,?,?,?,?,?,'Received',CURRENT_TIMESTAMP)
+"""), (
+    restaurant_id,
+    table_no,
+    customer_name,
+    customer_phone,
+    json.dumps(new_items),
+    new_total
+))
+
 
     commit()
     return jsonify({"success": True})
