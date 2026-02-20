@@ -601,13 +601,28 @@ def place_order():
 @app.route("/api/order/<int:order_id>/close", methods=["POST"])
 @login_required("admin")
 def close_order(order_id):
+
+    # close order
     execute(sql("""
         UPDATE orders
         SET status='Closed'
         WHERE id=? AND restaurant_id=?
     """), (order_id, session["restaurant_id"]))
-
     commit()
+
+    # fetch full order details
+    order = fetchone(sql("""
+        SELECT o.*, r.name AS restaurant_name
+        FROM orders o
+        JOIN restaurants r ON o.restaurant_id=r.id
+        WHERE o.id=? AND o.restaurant_id=?
+    """), (order_id, session["restaurant_id"]))
+
+    restaurant = {"name": order["restaurant_name"]}
+
+    print("TRIGGERING AI AGENT")
+    trigger_feedback_agent(order, restaurant)
+
     return jsonify({"success": True})
 
 # --------------------------------------------------
@@ -1234,12 +1249,6 @@ def bill(order_id):
             """),
             (order_id, session["restaurant_id"])
         )
-
-        # 🔥 TRIGGER FEEDBACK AGENT (ASYNC SAFE)
-        restaurant = {
-            "name": order["restaurant_name"]
-        }
-        trigger_feedback_agent(order, restaurant)
 
     # ===============================
     # BILL CALCULATION
