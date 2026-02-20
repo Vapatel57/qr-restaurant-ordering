@@ -24,7 +24,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from menu_templates import MENU_TEMPLATES
 from decimal import Decimal
 from datetime import datetime
-N8N_FEEDBACK_WEBHOOK = "http://localhost:5678/webhook/order-completed"
+N8N_FEEDBACK_WEBHOOK = "http://localhost:5678/webhook-test/order-completed"
 def serialize_row(row):
     return {
         k: float(v) if isinstance(v, Decimal) else v
