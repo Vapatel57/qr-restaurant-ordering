@@ -43,13 +43,17 @@ def trigger_feedback_agent(order, restaurant):
         payload = {
             "order_id": order["id"],
             "customer_name": order.get("customer_name") or f"Table {order['table_no']}",
-            "phone": order.get("customer_phone", ""),   # add later if not present
+            "phone": order.get("customer_phone", ""),
             "items": order["items"],
             "bill": float(order["total"]),
             "restaurant": restaurant["name"]
         }
 
-        requests.post(N8N_FEEDBACK_WEBHOOK, json=payload, timeout=3)
+        print("SENDING TO N8N:", payload)
+
+        r = requests.post(N8N_FEEDBACK_WEBHOOK, json=payload, timeout=5)
+
+        print("N8N STATUS:", r.status_code, r.text)
 
     except Exception as e:
         print("Feedback agent failed:", e)
@@ -1232,7 +1236,10 @@ def bill(order_id):
         )
 
         # 🔥 TRIGGER FEEDBACK AGENT (ASYNC SAFE)
-        trigger_feedback_agent(order)
+        restaurant = {
+            "name": order["restaurant_name"]
+        }
+        trigger_feedback_agent(order, restaurant)
 
     # ===============================
     # BILL CALCULATION
