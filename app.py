@@ -602,7 +602,8 @@ def place_order():
 @login_required("admin")
 def close_order(order_id):
 
-    # close order
+    print("CLOSE ORDER ROUTE HIT", order_id)
+
     execute(sql("""
         UPDATE orders
         SET status='Closed'
@@ -610,7 +611,6 @@ def close_order(order_id):
     """), (order_id, session["restaurant_id"]))
     commit()
 
-    # fetch full order details
     order = fetchone(sql("""
         SELECT o.*, r.name AS restaurant_name
         FROM orders o
@@ -620,7 +620,7 @@ def close_order(order_id):
 
     restaurant = {"name": order["restaurant_name"]}
 
-    print("TRIGGERING AI AGENT")
+    print("TRIGGERING AI AGENT NOW")
     trigger_feedback_agent(order, restaurant)
 
     return jsonify({"success": True})
