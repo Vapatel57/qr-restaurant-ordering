@@ -537,14 +537,42 @@ def logout():
 @login_required("superadmin")
 def platform_restaurants():
     rows = fetchall(sql("""
-        SELECT r.id, r.name, r.subdomain, r.created_at,
-       COUNT(o.id) AS total_orders,
-       COALESCE(SUM(o.total), 0) AS total_revenue
+        SELECT 
+            r.id,
+            r.name,
+            r.subdomain,
+            r.plan,
+            r.created_at,
+            r.trial_expires_at,
+            r.subscription_end,
+            r.is_active,
+            COUNT(o.id) AS total_orders,
+            COALESCE(SUM(o.total), 0) AS total_revenue
         FROM restaurants r
         LEFT JOIN orders o ON r.id=o.restaurant_id
         GROUP BY r.id
         ORDER BY r.id DESC
     """))
+    restaurants = []
+
+    for r in rows:
+        r = dict(r)
+
+        now = datetime.utcnow()
+
+        trial_valid = r["trial_expires_at"] and r["trial_expires_at"] > now
+        sub_valid = r["subscription_end"] and r["subscription_end"] > now
+
+        if not r["is_active"]:
+            r["status"] = "Disabled"
+        elif trial_valid:
+            r["status"] = "Trial"
+        elif sub_valid:
+            r["status"] = "Active"
+        else:
+            r["status"] = "Expired"
+
+        restaurants.append(r)
 
     return render_template(
         "platform_restaurants.html",
