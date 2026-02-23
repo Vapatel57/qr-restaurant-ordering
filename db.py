@@ -10,7 +10,11 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SQLITE_PATH = os.path.join(BASE_DIR, "restaurant.db")
 
-# ---------------- DB CONNECTION ----------------
+
+# --------------------------------------------------
+# DB CONNECTION
+# --------------------------------------------------
+
 def get_db():
     if "db" not in g:
         if DB_TYPE == "postgres":
@@ -18,7 +22,7 @@ def get_db():
                 DATABASE_URL,
                 cursor_factory=RealDictCursor
             )
-            g.db.autocommit = True   # 🔥 REQUIRED
+            g.db.autocommit = True
         else:
             g.db = sqlite3.connect(
                 SQLITE_PATH,
@@ -32,14 +36,16 @@ def get_db():
     return g.db
 
 
-# ---------------- CLOSE CONNECTION ----------------
 def close_db(e=None):
     db = g.pop("db", None)
     if db:
         db.close()
 
 
-# ---------------- INIT DB (SQLITE ONLY) ----------------
+# --------------------------------------------------
+# SQLITE INIT (LOCAL DEV ONLY)
+# --------------------------------------------------
+
 def init_db():
     if DB_TYPE != "sqlite":
         return
@@ -47,6 +53,7 @@ def init_db():
     db = sqlite3.connect(SQLITE_PATH)
     c = db.cursor()
 
+    # ---------------- RESTAURANTS ----------------
     c.execute("""
     CREATE TABLE IF NOT EXISTS restaurants (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -55,10 +62,13 @@ def init_db():
         gstin TEXT,
         address TEXT,
         phone TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        trial_start DATETIME,
+        trial_expires_at DATETIME
     )
     """)
 
+    # ---------------- USERS ----------------
     c.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,11 +76,16 @@ def init_db():
         username TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         role TEXT NOT NULL,
+        is_verified INTEGER DEFAULT 0,
+        auth_provider TEXT DEFAULT 'local',
+        otp_code TEXT,
+        otp_expires_at DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (restaurant_id) REFERENCES restaurants(id)
     )
     """)
 
+    # ---------------- MENU ----------------
     c.execute("""
     CREATE TABLE IF NOT EXISTS menu (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,13 +100,18 @@ def init_db():
     )
     """)
 
+    # ---------------- ORDERS ----------------
     c.execute("""
     CREATE TABLE IF NOT EXISTS orders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         restaurant_id INTEGER NOT NULL,
         table_no INTEGER,
         customer_name TEXT,
+        customer_phone TEXT,
         items TEXT,
+        subtotal REAL,
+        cgst REAL,
+        sgst REAL,
         total REAL,
         status TEXT DEFAULT 'Received',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -99,6 +119,7 @@ def init_db():
     )
     """)
 
+    # ---------------- ORDER ADDITIONS ----------------
     c.execute("""
     CREATE TABLE IF NOT EXISTS order_additions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -115,35 +136,44 @@ def init_db():
     )
     """)
 
+    # ---------------- INDEXES ----------------
     c.execute("CREATE INDEX IF NOT EXISTS idx_orders_restaurant ON orders(restaurant_id)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_additions_restaurant ON order_additions(restaurant_id)")
     c.execute("CREATE INDEX IF NOT EXISTS idx_additions_status ON order_additions(status)")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_users_restaurant ON users(restaurant_id)")
 
     db.commit()
     db.close()
+
+
+# --------------------------------------------------
+# HELPERS
+# --------------------------------------------------
 
 def today_clause(column):
     if DB_TYPE == "postgres":
         return f"{column}::date = CURRENT_DATE"
     return f"DATE({column}) = DATE('now')"
 
+
 def sql(query):
     """
-    Converts SQLite placeholders (?) to Postgres (%s) when needed
+    Convert SQLite placeholders (?) to Postgres (%s)
     """
     if DB_TYPE == "postgres":
         return query.replace("?", "%s")
     return query
+
+
 def execute(query, params=()):
     db = get_db()
 
-    # Postgres
     if DB_TYPE == "postgres":
         cur = db.cursor()
         cur.execute(query, params)
         return cur
 
-    # SQLite
     return db.execute(query, params)
 
 

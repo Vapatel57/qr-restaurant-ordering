@@ -584,14 +584,27 @@ def platform_restaurant_details(restaurant_id):
         WHERE restaurant_id=? AND role='kitchen'
     """), (restaurant_id,))
 
+    # ✅ CALCULATE DAYS REMAINING
+    days_remaining = None
+
+    if restaurant.get("trial_expires_at"):
+        expires = restaurant["trial_expires_at"]
+
+        # Ensure datetime object
+        if isinstance(expires, str):
+            expires = datetime.fromisoformat(expires)
+
+        delta = expires - datetime.utcnow()
+        days_remaining = max(delta.days, 0)
+
     return render_template(
         "platform_restaurant_details.html",
         restaurant=restaurant,
         stats=stats,
         menu_count=menu_count["count"],
-        kitchen_users=[u["username"] for u in kitchen_users]
+        kitchen_users=[u["username"] for u in kitchen_users],
+        days_remaining=days_remaining   # ✅ PASS THIS
     )
-
 # --------------------------------------------------
 # CUSTOMER
 # --------------------------------------------------

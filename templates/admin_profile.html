@@ -5,10 +5,7 @@
     <title>Admin Profile | QR-Order</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- FontAwesome -->
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
 </head>
@@ -17,17 +14,35 @@
 
 <div class="flex min-h-screen">
 
+    <!-- MOBILE OVERLAY -->
+    <div id="sidebar-overlay"
+         class="fixed inset-0 bg-black/40 hidden z-40 md:hidden"
+         onclick="toggleSidebar()"></div>
+
     <!-- SIDEBAR -->
-    {% include "partials/admin_sidebar.html" %}
+    <aside id="sidebar"
+           class="fixed md:static inset-y-0 left-0 w-64 bg-gray-900 text-white transform -translate-x-full md:translate-x-0 transition-transform duration-300 z-50">
+        {% include "partials/admin_sidebar.html" %}
+    </aside>
 
     <!-- MAIN CONTENT -->
     <main class="flex-1 w-full overflow-y-auto">
 
         <!-- HEADER -->
-        <header class="bg-white shadow-sm px-4 sm:px-6 py-4">
+        <header class="bg-white shadow-sm px-4 sm:px-6 py-4 flex items-center justify-between">
+
+            <!-- Hamburger (Mobile Only) -->
+            <button onclick="toggleSidebar()"
+                    class="md:hidden text-gray-700 text-xl">
+                <i class="fas fa-bars"></i>
+            </button>
+
             <h2 class="text-lg sm:text-xl font-bold text-gray-800">
                 Restaurant Profile
             </h2>
+
+            <div></div> <!-- spacing fix -->
+
         </header>
 
         <!-- CONTENT -->
@@ -41,7 +56,6 @@
 
                 <form method="POST" class="space-y-5 w-full">
 
-                    <!-- Restaurant Name -->
                     <div>
                         <label class="block text-sm font-semibold mb-1">
                             Restaurant Name
@@ -52,7 +66,6 @@
                                required>
                     </div>
 
-                    <!-- GSTIN -->
                     <div>
                         <label class="block text-sm font-semibold mb-1">
                             GSTIN
@@ -62,7 +75,6 @@
                                class="w-full border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none px-4 py-2.5 rounded-lg">
                     </div>
 
-                    <!-- Contact -->
                     <div>
                         <label class="block text-sm font-semibold mb-1">
                             Contact Number
@@ -72,7 +84,6 @@
                                class="w-full border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none px-4 py-2.5 rounded-lg">
                     </div>
 
-                    <!-- Address -->
                     <div>
                         <label class="block text-sm font-semibold mb-1">
                             Address
@@ -82,7 +93,6 @@
                                   class="w-full border border-gray-300 focus:ring-2 focus:ring-emerald-500 focus:outline-none px-4 py-2.5 rounded-lg resize-none">{{ restaurant.address }}</textarea>
                     </div>
 
-                    <!-- Button -->
                     <div class="pt-2">
                         <button
                             class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 transition text-white px-6 py-3 rounded-lg font-semibold shadow-sm">
@@ -97,6 +107,16 @@
         </div>
     </main>
 </div>
+
+<script>
+function toggleSidebar() {
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("sidebar-overlay");
+
+    sidebar.classList.toggle("-translate-x-full");
+    overlay.classList.toggle("hidden");
+}
+</script>
 
 </body>
 </html>
