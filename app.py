@@ -633,6 +633,24 @@ def platform_restaurant_details(restaurant_id):
         kitchen_users=[u["username"] for u in kitchen_users],
         days_remaining=days_remaining   # ✅ PASS THIS
     )
+@app.route("/api/platform/restaurants/<int:restaurant_id>/toggle", methods=["POST"])
+@login_required("superadmin")
+def toggle_restaurant_status(restaurant_id):
+
+    try:
+        execute(sql("""
+            UPDATE restaurants
+            SET is_active = NOT is_active
+            WHERE id=?
+        """), (restaurant_id,))
+
+        commit()
+
+        return jsonify({"success": True})
+
+    except Exception as e:
+        print("ERROR:", e)
+        return jsonify({"error": str(e)}), 500
 # --------------------------------------------------
 # CUSTOMER
 # --------------------------------------------------
