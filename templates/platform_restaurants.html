@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Active Restaurants | Platform Admin</title>
+<title>Restaurants | Platform Admin</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://cdn.tailwindcss.com"></script>
@@ -15,15 +15,27 @@
 <div class="p-4 sm:p-8 max-w-7xl mx-auto">
 
     <!-- HEADER -->
-    <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
-        <h1 class="text-2xl sm:text-3xl font-black text-gray-800">
-            🍽️ Restaurants
-        </h1>
+<div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
 
-        <span class="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-full font-bold text-sm w-fit">
+    <h1 class="text-2xl sm:text-3xl font-black text-gray-800">
+        🍽️ Restaurants
+    </h1>
+
+    <div class="flex items-center gap-3">
+
+        <span class="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-full font-bold text-sm">
             Platform Owner
         </span>
+
+        <!-- LOGOUT BUTTON -->
+        <a href="/logout"
+           class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition">
+            <i class="fas fa-sign-out-alt mr-1"></i> Logout
+        </a>
+
     </div>
+
+</div>
 
     <div class="bg-white rounded-xl shadow overflow-hidden">
 
@@ -35,16 +47,16 @@
                         <th class="p-4">Restaurant</th>
                         <th class="p-4">Subdomain</th>
                         <th class="p-4">Plan</th>
-                        <th class="p-4">Status</th>
                         <th class="p-4">Orders</th>
                         <th class="p-4">Revenue</th>
+                        <th class="p-4 text-center">Active</th>
                         <th class="p-4">Actions</th>
                     </tr>
                 </thead>
 
                 <tbody>
                 {% for r in restaurants %}
-                    <tr class="border-b hover:bg-gray-50">
+                    <tr class="border-b hover:bg-gray-50 {% if not r.is_active %}opacity-50{% endif %}">
 
                         <td class="p-4 font-bold text-gray-800">
                             {{ r.name }}
@@ -58,27 +70,6 @@
                             {{ r.plan }}
                         </td>
 
-                        <!-- STATUS BADGE -->
-                        <td class="p-4">
-                            {% if r.status == "Trial" %}
-                                <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-bold">
-                                    Trial
-                                </span>
-                            {% elif r.status == "Active" %}
-                                <span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold">
-                                    Active
-                                </span>
-                            {% elif r.status == "Expired" %}
-                                <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">
-                                    Expired
-                                </span>
-                            {% else %}
-                                <span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">
-                                    Disabled
-                                </span>
-                            {% endif %}
-                        </td>
-
                         <td class="p-4 font-semibold">
                             {{ r.total_orders }}
                         </td>
@@ -87,8 +78,28 @@
                             ₹{{ r.total_revenue }}
                         </td>
 
-                        <td class="p-4 space-x-2">
+                        <!-- TOGGLE -->
+                        <td class="p-4 text-center">
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox"
+                                       class="sr-only peer"
+                                       {% if r.is_active %}checked{% endif %}
+                                       onchange="toggleRestaurant({{ r.id }}, this)">
+                                <div class="w-11 h-6 bg-gray-300 rounded-full peer
+                                            peer-checked:bg-emerald-500
+                                            transition
+                                            after:content-['']
+                                            after:absolute after:top-[2px] after:left-[2px]
+                                            after:bg-white after:rounded-full
+                                            after:h-5 after:w-5
+                                            after:transition-all
+                                            peer-checked:after:translate-x-5">
+                                </div>
+                            </label>
+                        </td>
 
+                        <!-- ACTIONS -->
+                        <td class="p-4 space-x-3">
                             <a href="/customer/{{ r.subdomain }}?table=1"
                                target="_blank"
                                class="text-sm bg-gray-900 text-white px-3 py-2 rounded hover:bg-gray-800">
@@ -99,12 +110,6 @@
                                class="text-emerald-600 font-semibold hover:underline">
                                 Details
                             </a>
-
-                            <button onclick="toggleRestaurant({{ r.id }})"
-                                class="text-red-600 font-semibold hover:underline">
-                                Disable
-                            </button>
-
                         </td>
                     </tr>
                 {% endfor %}
@@ -115,7 +120,7 @@
         <!-- ================= MOBILE CARDS ================= -->
         <div class="md:hidden divide-y">
             {% for r in restaurants %}
-            <div class="p-4">
+            <div class="p-4 {% if not r.is_active %}opacity-50{% endif %}">
 
                 <div class="flex justify-between items-start">
                     <div>
@@ -127,25 +132,23 @@
                         </p>
                     </div>
 
-                    <div>
-                        {% if r.status == "Trial" %}
-                            <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs font-bold">
-                                Trial
-                            </span>
-                        {% elif r.status == "Active" %}
-                            <span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded text-xs font-bold">
-                                Active
-                            </span>
-                        {% elif r.status == "Expired" %}
-                            <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">
-                                Expired
-                            </span>
-                        {% else %}
-                            <span class="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-bold">
-                                Disabled
-                            </span>
-                        {% endif %}
-                    </div>
+                    <!-- TOGGLE -->
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox"
+                               class="sr-only peer"
+                               {% if r.is_active %}checked{% endif %}
+                               onchange="toggleRestaurant({{ r.id }}, this)">
+                        <div class="w-10 h-5 bg-gray-300 rounded-full peer
+                                    peer-checked:bg-emerald-500
+                                    transition
+                                    after:content-['']
+                                    after:absolute after:top-[2px] after:left-[2px]
+                                    after:bg-white after:rounded-full
+                                    after:h-4 after:w-4
+                                    after:transition-all
+                                    peer-checked:after:translate-x-5">
+                        </div>
+                    </label>
                 </div>
 
                 <div class="mt-3 text-sm text-gray-600">
@@ -154,24 +157,17 @@
                     Revenue: <span class="font-semibold text-emerald-600">₹{{ r.total_revenue }}</span>
                 </div>
 
-                <div class="mt-4 flex flex-col gap-2">
-
+                <div class="mt-4 flex gap-3">
                     <a href="/customer/{{ r.subdomain }}?table=1"
                        target="_blank"
-                       class="text-center bg-gray-900 text-white py-2 rounded-lg text-sm">
+                       class="flex-1 text-center bg-gray-900 text-white py-2 rounded-lg text-sm">
                         View
                     </a>
 
                     <a href="/platform/restaurants/{{ r.id }}"
-                       class="text-center border border-emerald-600 text-emerald-600 py-2 rounded-lg text-sm font-semibold">
+                       class="flex-1 text-center border border-emerald-600 text-emerald-600 py-2 rounded-lg text-sm font-semibold">
                         Details
                     </a>
-
-                    <button onclick="toggleRestaurant({{ r.id }})"
-                        class="text-center border border-red-600 text-red-600 py-2 rounded-lg text-sm font-semibold">
-                        Disable
-                    </button>
-
                 </div>
 
             </div>
@@ -182,22 +178,24 @@
 
 </div>
 
+<!-- JS -->
 <script>
-function toggleRestaurant(id) {
-    if (!confirm("Are you sure you want to disable this restaurant?")) return;
+function toggleRestaurant(id, el) {
 
-    fetch(`/api/platform/restaurants/${id}/toggle`, {
+    fetch(`/platform/restaurants/${id}/toggle`, {
         method: "POST"
     })
     .then(res => res.json())
     .then(data => {
-        if (data.success) {
-            location.reload();
-        } else {
-            alert("Action failed");
+        if (!data.success) {
+            el.checked = !el.checked;
+            alert("Server error");
         }
     })
-    .catch(() => alert("Server error"));
+    .catch(() => {
+        el.checked = !el.checked;
+        alert("Server error");
+    });
 }
 </script>
 
