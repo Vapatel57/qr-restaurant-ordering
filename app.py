@@ -24,7 +24,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from menu_templates import MENU_TEMPLATES
 from decimal import Decimal
 from datetime import datetime
-N8N_FEEDBACK_WEBHOOK = "http://localhost:5678/webhook-test/order-completed"
 def serialize_row(row):
     return {
         k: float(v) if isinstance(v, Decimal) else v
@@ -38,25 +37,21 @@ def json_safe(obj):
     if isinstance(obj, Decimal):
         return float(obj)
     return obj
-def trigger_feedback_agent(order, restaurant):
-    try:
-        payload = {
-            "order_id": order["id"],
-            "customer_name": order.get("customer_name") or f"Table {order['table_no']}",
-            "phone": order.get("customer_phone", ""),
-            "items": order["items"],
-            "bill": float(order["total"]),
-            "restaurant": restaurant["name"]
-        }
 
-        print("SENDING TO N8N:", payload)
+def calculate_bill(items, gst_rate=0.05):
+    subtotal = round(
+        sum(float(i["price"]) * int(i["qty"]) for i in items),
+        2
+    )
 
-        r = requests.post(N8N_FEEDBACK_WEBHOOK, json=payload, timeout=5)
+    half = gst_rate / 2
 
-        print("N8N STATUS:", r.status_code, r.text)
+    cgst = round(subtotal * half, 2)
+    sgst = round(subtotal * half, 2)
 
-    except Exception as e:
-        print("Feedback agent failed:", e)
+    total = round(subtotal + cgst + sgst, 2)
+
+    return subtotal, cgst, sgst, total
 # --------------------------------------------------
 # CONFIG
 # --------------------------------------------------
@@ -519,7 +514,7 @@ def place_order():
 
     # 🔎 Find existing OPEN order for table
     existing = fetchone(sql("""
-        SELECT id, items, total
+        SELECT id, items
         FROM orders
         WHERE restaurant_id=? AND table_no=? AND status!='Closed'
         ORDER BY id DESC
@@ -532,8 +527,6 @@ def place_order():
         "qty": int(i["qty"])
     } for i in items]
 
-    new_total = sum(i["price"] * i["qty"] for i in new_items)
-
     # ===============================
     # ✅ CASE 1: APPEND TO EXISTING ORDER
     # ===============================
@@ -545,16 +538,26 @@ def place_order():
         )
 
         combined_items = old_items + new_items
-        updated_total = float(existing["total"]) + new_total
 
-        # 🔥 ALSO update customer details (important)
+        # 🔥 Recalculate FULL BILL
+        subtotal, cgst, sgst, total = calculate_bill(combined_items)
+
         execute(sql("""
             UPDATE orders
-            SET items=?, total=?, customer_name=?, customer_phone=?
+            SET items=?,
+                subtotal=?,
+                cgst=?,
+                sgst=?,
+                total=?,
+                customer_name=?,
+                customer_phone=?
             WHERE id=?
         """), (
             json.dumps(combined_items),
-            updated_total,
+            subtotal,
+            cgst,
+            sgst,
+            total,
             customer_name,
             customer_phone,
             existing["id"]
@@ -581,19 +584,26 @@ def place_order():
     # ===============================
     # ✅ CASE 2: CREATE NEW ORDER
     # ===============================
-    execute(sql("""
-    INSERT INTO orders
-    (restaurant_id, table_no, customer_name, customer_phone, items, total, status, created_at)
-    VALUES (?,?,?,?,?,?,'Received',CURRENT_TIMESTAMP)
-"""), (
-    restaurant_id,
-    table_no,
-    customer_name,
-    customer_phone,
-    json.dumps(new_items),
-    new_total
-))
 
+    subtotal, cgst, sgst, total = calculate_bill(new_items)
+
+    execute(sql("""
+        INSERT INTO orders
+        (restaurant_id, table_no, customer_name, customer_phone,
+         items, subtotal, cgst, sgst, total,
+         status, created_at)
+        VALUES (?,?,?,?,?,?,?,?,?,'Received',CURRENT_TIMESTAMP)
+    """), (
+        restaurant_id,
+        table_no,
+        customer_name,
+        customer_phone,
+        json.dumps(new_items),
+        subtotal,
+        cgst,
+        sgst,
+        total
+    ))
 
     commit()
     return jsonify({"success": True})
@@ -655,7 +665,7 @@ def add_item_to_order(order_id):
 
     # 2️⃣ Fetch order
     order = fetchone(sql("""
-        SELECT items, total, table_no
+        SELECT items, table_no
         FROM orders
         WHERE id=? AND restaurant_id=?
     """), (order_id, session["restaurant_id"]))
@@ -666,34 +676,41 @@ def add_item_to_order(order_id):
     # 3️⃣ Parse items
     items = order["items"]
     if isinstance(items, str):
-        items = json.loads(items)
+        items = json.loads(items or "[]")
     if not items:
         items = []
 
     # 4️⃣ Add item
     items.append({
-    "id": str(uuid.uuid4()),   # 🔥 UNIQUE
-    "name": item["name"],
-    "price": price,
-    "qty": qty
+        "id": str(uuid.uuid4()),
+        "name": item["name"],
+        "price": price,
+        "qty": qty
     })
 
+    # 🔥 Recalculate FULL BILL
+    subtotal, cgst, sgst, total = calculate_bill(items)
 
-    new_total = float(order["total"]) + (price * qty)
-
-    # 5️⃣ Update order
+    # 5️⃣ Update order with ALL billing columns
     execute(sql("""
         UPDATE orders
-        SET items=?, total=?
+        SET items=?,
+            subtotal=?,
+            cgst=?,
+            sgst=?,
+            total=?
         WHERE id=? AND restaurant_id=?
     """), (
         json.dumps(items),
-        new_total,
+        subtotal,
+        cgst,
+        sgst,
+        total,
         order_id,
         session["restaurant_id"]
     ))
 
-    # 6️⃣ Kitchen addition
+    # 6️⃣ Kitchen addition (only new item)
     execute(sql("""
         INSERT INTO order_additions
         (order_id, restaurant_id, table_no, item_name, qty, price, status, created_at)
@@ -709,7 +726,6 @@ def add_item_to_order(order_id):
 
     commit()
     return jsonify({"success": True})
-
 
 # -----------------------
 #    KITCHEN
@@ -1187,20 +1203,21 @@ def edit_order(order_id):
         else json.loads(order["items"] or "[]")
     )
 
-    # ✅ CALCULATE TOTALS
-    subtotal = sum(i["price"] * i["qty"] for i in items)
-    gst = round(subtotal * 0.05, 2)
-    total = round(subtotal + gst, 2)
+    # ✅ USE STORED BILLING VALUES (DO NOT RECALCULATE)
+    subtotal = float(order["subtotal"])
+    cgst = float(order["cgst"])
+    sgst = float(order["sgst"])
+    total = float(order["total"])
 
     return render_template(
         "edit_bill.html",
         order=order,
         items=items,
         subtotal=subtotal,
-        gst=gst,
+        cgst=cgst,
+        sgst=sgst,
         total=total
     )
-
 @app.route("/bill/<int:order_id>")
 @login_required("admin")
 def bill(order_id):
@@ -1223,9 +1240,7 @@ def bill(order_id):
     if not order:
         return "Order not found", 404
 
-    # ===============================
-    # 🔥 WHEN BILL IS GENERATED → CLOSE ORDER → TRIGGER AI
-    # ===============================
+    # 🔥 CLOSE ORDER IF NOT CLOSED
     if order["status"] != "Closed":
         execute(sql("""
             UPDATE orders
@@ -1234,7 +1249,6 @@ def bill(order_id):
         """), (order_id, session["restaurant_id"]))
         commit()
 
-        # refresh order after update
         order = fetchone(
             sql("""
                 SELECT 
@@ -1250,9 +1264,7 @@ def bill(order_id):
             (order_id, session["restaurant_id"])
         )
 
-    # ===============================
-    # BILL CALCULATION
-    # ===============================
+    # ✅ SAFE PARSE ITEMS (grouping only for display)
     raw_items = (
         order["items"]
         if isinstance(order["items"], list)
@@ -1272,23 +1284,25 @@ def bill(order_id):
 
     items = list(grouped.values())
 
-    subtotal = sum(i["price"] * i["qty"] for i in items)
-    gst = round(subtotal * 0.05, 2)
-    total = round(subtotal + gst, 2)
+    # ✅ USE STORED BILLING VALUES
+    subtotal = float(order["subtotal"])
+    cgst = float(order["cgst"])
+    sgst = float(order["sgst"])
+    total = float(order["total"])
 
     return render_template(
         "bill.html",
         order=order,
         items=items,
         subtotal=subtotal,
-        gst=gst,
+        cgst=cgst,
+        sgst=sgst,
         total=total,
         restaurant_name=order["restaurant_name"],
         gstin=order["restaurant_gstin"],
         address=order["restaurant_address"],
         phone=order["restaurant_phone"]
     )
-
 @app.route("/api/order/<int:order_id>/remove-item", methods=["POST"])
 @login_required("admin")
 def remove_item_from_order(order_id):
@@ -1307,6 +1321,8 @@ def remove_item_from_order(order_id):
     items = order["items"]
     if isinstance(items, str):
         items = json.loads(items or "[]")
+    if not items:
+        items = []
 
     # 🔥 REMOVE ONLY ONE ITEM
     removed = False
@@ -1321,57 +1337,29 @@ def remove_item_from_order(order_id):
     if not removed:
         return jsonify({"error": "Item not found"}), 400
 
-    # 🔥 RECALCULATE TOTAL
-    new_total = sum(i["price"] * i["qty"] for i in new_items)
+    # 🔥 Recalculate FULL BILL
+    subtotal, cgst, sgst, total = calculate_bill(new_items)
 
     execute(sql("""
         UPDATE orders
-        SET items=?, total=?
+        SET items=?,
+            subtotal=?,
+            cgst=?,
+            sgst=?,
+            total=?
         WHERE id=? AND restaurant_id=?
     """), (
         json.dumps(new_items),
-        new_total,
+        subtotal,
+        cgst,
+        sgst,
+        total,
         order_id,
         session["restaurant_id"]
     ))
 
     commit()
     return jsonify({"success": True})
-
-@app.route("/bill/<int:order_id>/thermal")
-@login_required("admin")
-def thermal_bill(order_id):
-
-    order = fetchone(
-        sql("""
-            SELECT o.*, r.name, r.gstin, r.address, r.phone
-            FROM orders o
-            JOIN restaurants r ON o.restaurant_id = r.id
-            WHERE o.id=? AND o.restaurant_id=?
-        """),
-        (order_id, session["restaurant_id"])
-    )
-
-    if not order:
-        return "Order not found", 404
-
-    items = json.loads(order["items"])
-
-    subtotal = sum(i["price"] * i["qty"] for i in items)
-    cgst = round(subtotal * 0.025, 2)
-    sgst = round(subtotal * 0.025, 2)
-    total = round(subtotal + cgst + sgst, 2)
-
-    return render_template(
-        "bill_thermal.html",
-        order=order,
-        items=items,
-        subtotal=subtotal,
-        cgst=cgst,
-        sgst=sgst,
-        total=total
-    )
-
 
 @app.route("/api/orders")
 @login_required("admin")
@@ -1409,76 +1397,6 @@ def kitchen_orders():
         {k: json_safe(v) for k, v in dict(o).items()}
         for o in orders
     ])
-
-# =================================================
-# AI Agent
-# =================================================
-@app.route("/api/daily-report", methods=["GET"])
-def daily_report():
-
-    if request.headers.get("Authorization") != "Bearer supersecret":
-        return jsonify({"error": "Unauthorized"}), 401
-
-    try:
-        query = """
-        WITH today_orders AS (
-            SELECT id, table_no, total
-            FROM orders
-            WHERE status = 'Closed'
-            AND created_at::date = CURRENT_DATE
-        ),
-        today_items AS (
-            SELECT oa.item_name, oa.qty, oa.table_no, oa.order_id
-            FROM order_additions oa
-            JOIN today_orders o ON o.id = oa.order_id
-        ),
-        top_dish AS (
-            SELECT item_name, SUM(qty) AS total_qty
-            FROM today_items
-            GROUP BY item_name
-            ORDER BY total_qty DESC
-            LIMIT 1
-        ),
-        busiest_table AS (
-            SELECT table_no, COUNT(*) AS orders_count
-            FROM today_orders
-            GROUP BY table_no
-            ORDER BY orders_count DESC
-            LIMIT 1
-        )
-        SELECT
-            COALESCE((SELECT SUM(total) FROM today_orders),0) AS revenue,
-            COALESCE((SELECT COUNT(*) FROM today_orders),0) AS total_orders,
-            COALESCE((SELECT item_name FROM top_dish),'No orders') AS top_dish,
-            COALESCE((SELECT table_no FROM busiest_table),0) AS busiest_table;
-        """
-
-        result = fetchone(query)
-
-        # SAFETY CHECK
-        if not result:
-            return jsonify({
-                "revenue": 0,
-                "orders": 0,
-                "top_dish": "No orders",
-                "busiest_table": 0
-            })
-
-        # Works for tuple or dict
-        revenue = result[0] if isinstance(result, tuple) else result["revenue"]
-        orders = result[1] if isinstance(result, tuple) else result["total_orders"]
-        top_dish = result[2] if isinstance(result, tuple) else result["top_dish"]
-        table = result[3] if isinstance(result, tuple) else result["busiest_table"]
-
-        return jsonify({
-            "revenue": float(revenue),
-            "orders": int(orders),
-            "top_dish": top_dish,
-            "busiest_table": int(table)
-        })
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 # --------------------------------------------------
 # ROOT
