@@ -8,21 +8,27 @@ const orderCount = document.getElementById("order-count");
 const pendingCount = document.getElementById("pending-count");
 const revenueEl = document.getElementById("today-revenue");
 
-let previousOrdersJSON = ""; // prevents blinking refresh
+let previousOrdersJSON = "";
 
 
 /* =========================================================
-   SIDEBAR
+   SIDEBAR (Mobile Safe)
 ========================================================= */
 
 function toggleSidebar() {
-    document.getElementById("sidebar").classList.toggle("-translate-x-full");
-    document.getElementById("sidebar-overlay").classList.toggle("hidden");
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("sidebar-overlay");
+
+    sidebar.classList.toggle("-translate-x-full");
+    overlay.classList.toggle("hidden");
+
+    // Prevent background scroll when open
+    document.body.classList.toggle("overflow-hidden");
 }
 
 
 /* =========================================================
-   LOAD ORDERS (SMART REFRESH — NO BLINKING)
+   LOAD ORDERS (SMART REFRESH)
 ========================================================= */
 
 function loadOrders() {
@@ -32,7 +38,6 @@ function loadOrders() {
 
             const newJSON = JSON.stringify(data);
 
-            // If nothing changed → do not re-render
             if (newJSON === previousOrdersJSON) return;
 
             previousOrdersJSON = newJSON;
@@ -58,7 +63,7 @@ function generateBillAndClose(orderId) {
         .then(r => r.json())
         .then(r => {
             if (r.success) {
-                previousOrdersJSON = ""; // force refresh
+                previousOrdersJSON = "";
                 window.location.href = `/bill/${orderId}`;
             } else {
                 alert("Failed to close order");
@@ -69,13 +74,13 @@ function generateBillAndClose(orderId) {
 
 
 /* =========================================================
-   RENDER ORDERS
+   RENDER ORDERS (Optimized Rendering)
 ========================================================= */
 
 function renderOrders(orders) {
 
-    tableBody.innerHTML = "";
-    mobileContainer.innerHTML = "";
+    let tableHTML = "";
+    let mobileHTML = "";
 
     let pending = 0;
     let revenue = 0;
@@ -115,29 +120,25 @@ function renderOrders(orders) {
             ? itemsArr.map(i => `${i.qty}× ${i.name}`).join(", ")
             : "<span class='text-gray-400'>No items</span>";
 
-        /* ================= DESKTOP TABLE ================= */
+        /* ================= DESKTOP ================= */
 
-        tableBody.innerHTML += `
+        tableHTML += `
         <tr class="border-b hover:bg-gray-50">
             <td class="p-4 font-bold">Table ${o.table_no}</td>
-
             <td class="p-4 text-sm">${itemsText}</td>
-
             <td class="p-4 font-semibold">₹${o.total}</td>
-
             <td class="p-4">${o.status}</td>
-
             <td class="p-4 flex gap-2 flex-wrap">
                 ${
                 !isClosed
                 ? `
                 <button onclick="openEditBill(${o.id})"
-                    class="bg-blue-600 text-white px-4 py-2 rounded text-sm">
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm w-full sm:w-auto">
                     Edit
                 </button>
 
                 <button onclick="generateBillAndClose(${o.id})"
-                    class="bg-red-600 text-white px-4 py-2 rounded text-sm">
+                    class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm w-full sm:w-auto">
                     Close
                 </button>
                 `
@@ -146,17 +147,16 @@ function renderOrders(orders) {
             </td>
         </tr>`;
 
+        /* ================= MOBILE ================= */
 
-        /* ================= MOBILE CARD ================= */
-
-        mobileContainer.innerHTML += `
-        <div class="p-4">
+        mobileHTML += `
+        <div class="p-4 space-y-2">
             <div class="flex justify-between items-center">
                 <div class="font-bold text-lg">Table ${o.table_no}</div>
                 <div class="text-xs px-2 py-1 rounded bg-gray-100">${o.status}</div>
             </div>
 
-            <div class="text-sm text-gray-600 mt-2">${itemsText}</div>
+            <div class="text-sm text-gray-600">${itemsText}</div>
 
             <div class="flex justify-between items-center mt-3">
                 <div class="font-bold text-emerald-600">₹${o.total}</div>
@@ -166,12 +166,12 @@ function renderOrders(orders) {
                 ? `
                 <div class="flex gap-2">
                     <button onclick="openEditBill(${o.id})"
-                        class="bg-blue-600 text-white px-4 py-2 rounded text-sm">
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm">
                         Edit
                     </button>
 
                     <button onclick="generateBillAndClose(${o.id})"
-                        class="bg-red-600 text-white px-4 py-2 rounded text-sm">
+                        class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm">
                         Close
                     </button>
                 </div>
@@ -182,9 +182,12 @@ function renderOrders(orders) {
         </div>`;
     });
 
+    tableBody.innerHTML = tableHTML;
+    mobileContainer.innerHTML = mobileHTML;
+
     orderCount.innerText = orders.length;
     pendingCount.innerText = pending;
-    revenueEl.innerText = `₹${revenue}`;
+    revenueEl.innerText = `₹${revenue.toFixed(2)}`;
 }
 
 
@@ -194,11 +197,13 @@ function renderOrders(orders) {
 
 function openHistory() {
     document.getElementById("history-modal").classList.remove("hidden");
+    document.body.classList.add("overflow-hidden");
 }
 
 function closeHistory() {
     document.getElementById("history-modal").classList.add("hidden");
     document.getElementById("history-result").innerHTML = "";
+    document.body.classList.remove("overflow-hidden");
 }
 
 async function loadHistory() {
@@ -215,15 +220,15 @@ async function loadHistory() {
     }
 
     let html = `
-        <div class="font-semibold mb-2">
-            Orders: ${data.count} | Revenue: ₹${data.revenue}
+        <div class="font-semibold mb-3">
+            Orders: ${data.count} | Revenue: ₹${Number(data.revenue).toFixed(2)}
         </div>
         <ul class="space-y-2">
     `;
 
     data.orders.forEach(o => {
         html += `
-            <li class="border rounded p-2">
+            <li class="border rounded-lg p-3">
                 <div><b>Table:</b> ${o.table_no}</div>
                 <div><b>Total:</b> ₹${o.total}</div>
                 <div><b>Status:</b> ${o.status}</div>
@@ -242,4 +247,4 @@ async function loadHistory() {
 ========================================================= */
 
 loadOrders();
-setInterval(loadOrders, 5000); // smoother than 3s
+setInterval(loadOrders, 5000);

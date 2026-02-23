@@ -1,71 +1,141 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Complete Setup | QR-Order</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>Complete Setup | QR-Order</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Same Tailwind setup as signup -->
-    <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900
+             min-h-screen flex items-center justify-center px-4">
 
-<div class="bg-white w-full max-w-xl rounded-xl shadow-xl p-8">
+<div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl p-8 sm:p-10">
 
-    <h2 class="text-2xl font-black text-center mb-2">
-        Complete Restaurant Setup
-    </h2>
+    <!-- HEADER -->
+    <div class="text-center mb-6">
+        <h2 class="text-3xl font-black text-gray-800">
+            Complete Your Setup
+        </h2>
+        <p class="text-sm text-gray-500 mt-2">
+            Just a few details to launch your restaurant 🚀
+        </p>
+    </div>
 
-    <p class="text-center text-sm text-gray-600 mb-6">
-        Finish setting up your restaurant to continue
-    </p>
+    <!-- PROGRESS -->
+    <div class="mb-6">
+        <div class="flex justify-between text-xs font-semibold text-gray-500 mb-1">
+            <span>Account Created</span>
+            <span>Final Step</span>
+        </div>
+        <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-emerald-600 h-2 rounded-full w-full"></div>
+        </div>
+    </div>
 
-    <!-- Google Email Info -->
-    <div class="bg-gray-100 text-gray-700 px-4 py-3 rounded-lg mb-4 text-sm font-semibold text-center">
+    <!-- GOOGLE EMAIL -->
+    <div class="bg-gray-100 text-gray-700 px-4 py-3 rounded-xl
+                mb-5 text-sm font-semibold text-center">
         Logged in as: {{ email }}
     </div>
 
-    <!-- ERROR MESSAGE -->
+    <!-- ERROR -->
     {% if error %}
-    <div class="bg-red-100 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm font-semibold">
+    <div class="bg-red-100 text-red-700 px-4 py-3 rounded-xl
+                mb-4 text-sm font-semibold">
         {{ error }}
     </div>
     {% endif %}
 
     <form method="POST" class="space-y-4">
 
-        <input name="restaurant_name" required
-               placeholder="Restaurant Name"
-               class="w-full border px-4 py-3 rounded-lg">
+        <!-- Restaurant Name -->
+        <div>
+            <label class="text-sm font-semibold text-gray-700">
+                Restaurant Name *
+            </label>
+            <input name="restaurant_name" required
+                   placeholder="e.g. Alexa Cafe"
+                   class="w-full border px-4 py-3 rounded-xl
+                          focus:ring-2 focus:ring-emerald-500
+                          outline-none mt-1">
+        </div>
 
-        <input name="subdomain" required
-               placeholder="Subdomain (e.g. alexa)"
-               class="w-full border px-4 py-3 rounded-lg">
+        <!-- Subdomain -->
+        <div>
+            <label class="text-sm font-semibold text-gray-700">
+                Subdomain *
+            </label>
+            <div class="flex mt-1">
+                <input name="subdomain" required
+                       placeholder="alexa"
+                       class="flex-1 border px-4 py-3 rounded-l-xl
+                              focus:ring-2 focus:ring-emerald-500
+                              outline-none">
+                <span class="bg-gray-100 px-3 flex items-center
+                             rounded-r-xl text-sm text-gray-600">
+                    .qrorder.com
+                </span>
+            </div>
+            <p class="text-xs text-gray-500 mt-1">
+                This will be your public ordering link
+            </p>
+        </div>
 
-        <input name="gstin"
-               placeholder="GSTIN (Optional)"
-               maxlength="15"
-               class="w-full border px-4 py-3 rounded-lg">
+        <!-- Optional Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-        <input name="phone"
-               placeholder="Contact Number (Optional)"
-               class="w-full border px-4 py-3 rounded-lg">
+            <div>
+                <label class="text-sm font-semibold text-gray-700">
+                    GSTIN
+                </label>
+                <input name="gstin"
+                       maxlength="15"
+                       placeholder="Optional"
+                       class="w-full border px-4 py-3 rounded-xl
+                              focus:ring-2 focus:ring-emerald-500
+                              outline-none mt-1">
+            </div>
 
-        <textarea name="address" rows="3"
-                  placeholder="Restaurant Address (Optional)"
-                  class="w-full border px-4 py-3 rounded-lg"></textarea>
+            <div>
+                <label class="text-sm font-semibold text-gray-700">
+                    Contact Number
+                </label>
+                <input name="phone"
+                       placeholder="Optional"
+                       class="w-full border px-4 py-3 rounded-xl
+                              focus:ring-2 focus:ring-emerald-500
+                              outline-none mt-1">
+            </div>
 
+        </div>
+
+        <!-- Address -->
+        <div>
+            <label class="text-sm font-semibold text-gray-700">
+                Restaurant Address
+            </label>
+            <textarea name="address"
+                      rows="3"
+                      placeholder="Optional"
+                      class="w-full border px-4 py-3 rounded-xl
+                             focus:ring-2 focus:ring-emerald-500
+                             outline-none mt-1"></textarea>
+        </div>
+
+        <!-- SUBMIT -->
         <button type="submit"
                 class="w-full bg-emerald-600 hover:bg-emerald-700
-                       text-white py-3 rounded-lg font-bold">
-            Create Restaurant
+                       text-white py-3 rounded-xl font-bold
+                       transition duration-200 shadow-lg">
+            Launch My Restaurant
         </button>
 
     </form>
 
-    <p class="text-center text-sm text-gray-500 mt-4">
-        You can update these details later from settings
+    <p class="text-center text-xs text-gray-500 mt-6">
+        You can update these details anytime from settings.
     </p>
 
 </div>

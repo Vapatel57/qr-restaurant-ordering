@@ -11,62 +11,58 @@
 <body>
 
 <div class="overlay">
+
   <div class="modal">
 
-    <h2>Log in</h2>
+    <div class="brand">
+      <h1>QR Restaurant</h1>
+      <p>Smart ordering system</p>
+    </div>
+
+    <h2>Welcome back</h2>
+
     {% if error %}
-<div style="
-    background:#fee2e2;
-    color:#991b1b;
-    padding:10px;
-    border-radius:10px;
-    margin-bottom:15px;
-    text-align:center;
-">
-    {{ error }}
-</div>
-{% endif %}
+    <div class="error-box">
+      {{ error }}
+    </div>
+    {% endif %}
 
     <!-- GOOGLE LOGIN -->
     <a href="{{ url_for('google.login') }}" class="google-btn">
-    Sign in with Google
-</a>
-
-
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg">
+      Continue with Google
+    </a>
 
     <div class="divider"><span>OR</span></div>
-
-    <!-- 🔴 ERROR MESSAGE -->
-    {% if error %}
-      <p style="color:#dc2626; text-align:center; margin-bottom:12px;">
-        {{ error }}
-      </p>
-    {% endif %}
 
     <!-- EMAIL LOGIN -->
     <form method="POST">
-      <input type="text" name="username" placeholder="Username" required>
-      <input type="password" name="password" placeholder="Password" required>
 
-      <!-- FORGOT PASSWORD -->
-      <div style="text-align:right; margin-bottom:12px;">
-        <a href="/forgot-password"
-   style="display:block;text-align:right;font-size:13px;margin-bottom:10px;">
-   Forgot password?
-</a>
+      <input type="text" name="username"
+             placeholder="Username"
+             required>
 
+      <input type="password" name="password"
+             placeholder="Password"
+             required>
+
+      <div class="form-footer">
+        <a href="/forgot-password">Forgot password?</a>
       </div>
 
-      <button type="submit" class="primary-btn">Log in</button>
+      <button type="submit" class="primary-btn">
+        Log in
+      </button>
     </form>
 
-    <div class="divider"><span>OR</span></div>
+    <div class="divider"><span>NEW HERE?</span></div>
 
-    <a href="/signup" class="google-btn">
-      Create a new restaurant
+    <a href="/signup" class="secondary-btn">
+      Create your restaurant
     </a>
 
   </div>
+
 </div>
 
 </body>

@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Kitchen Users</title>
+    <title>Kitchen Users | QR-Order</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -10,15 +11,23 @@
     <!-- Font Awesome -->
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
-
 </head>
 
-<body class="bg-gray-100">
+<body class="bg-gray-100 font-sans">
 
-<div class="flex h-screen overflow-hidden">
+<div class="flex min-h-screen">
 
-    <!-- ================= SIDEBAR ================= -->
-    <aside class="w-64 bg-gray-900 text-white hidden md:flex flex-col">
+    <!-- MOBILE OVERLAY -->
+    <div id="sidebar-overlay"
+         onclick="toggleSidebar()"
+         class="fixed inset-0 bg-black/40 hidden z-40 md:hidden"></div>
+
+    <!-- SIDEBAR -->
+    <aside id="sidebar"
+        class="fixed md:static inset-y-0 left-0 w-64 bg-gray-900 text-white
+               transform -translate-x-full md:translate-x-0
+               transition duration-200 z-50 flex flex-col">
+
         <div class="p-6 text-2xl font-bold border-b border-gray-800 flex items-center gap-2">
             <span class="text-emerald-500">
                 <i class="fas fa-utensils"></i>
@@ -41,12 +50,15 @@
                class="flex items-center py-3 px-6 hover:bg-gray-800">
                 <i class="fas fa-th-large mr-3"></i> Tables & QRs
             </a>
+
             <a href="/admin/kitchen-users"
                class="flex items-center py-3 px-6 bg-gray-700 border-l-4 border-emerald-500">
-                <i class="fas fa-utensils mr-3"></i> Kitchen Users
+                <i class="fas fa-user-cog mr-3"></i> Kitchen Users
             </a>
-            <a href="/admin/profile" class="flex items-center py-3 px-6 hover:bg-gray-800">
-            <i class="fas fa-user mr-3"></i> Profile
+
+            <a href="/admin/profile"
+               class="flex items-center py-3 px-6 hover:bg-gray-800">
+                <i class="fas fa-user mr-3"></i> Profile
             </a>
         </nav>
 
@@ -58,80 +70,122 @@
         </div>
     </aside>
 
-    <!-- ================= MAIN CONTENT ================= -->
-    <main class="flex-1 p-8 overflow-y-auto">
+    <!-- MAIN -->
+    <main class="flex-1 overflow-y-auto">
 
-        <h2 class="text-2xl font-bold mb-6">Kitchen Users</h2>
+        <!-- HEADER -->
+        <header class="bg-white shadow-sm p-4 flex items-center justify-between sticky top-0 z-40">
 
-        <!-- ADD USER FORM -->
-        <div class="bg-white p-6 rounded-lg shadow mb-8 max-w-3xl">
-            <h3 class="font-semibold text-lg mb-4">Add Kitchen User</h3>
+            <div class="flex items-center gap-3">
+                <button onclick="toggleSidebar()" class="md:hidden text-2xl">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h2 class="text-xl font-semibold">
+                    Kitchen Users
+                </h2>
+            </div>
+        </header>
 
-            <form
-                id="kitchen-form"
-                method="POST"
-                action="/api/kitchen-users"
-                onsubmit="return false;"
-                class="flex gap-4"
-            >
-                <input
-    id="email"
-    name="email"
-    type="email"
-    placeholder="Email"
-    class="border p-2 rounded w-1/3"
-    required
->
+        <div class="p-4 sm:p-6 max-w-4xl">
 
-<input
-    id="password"
-    name="password"
-    type="password"
-    placeholder="Password"
-    class="border p-2 rounded w-1/3"
-    required
->
+            <!-- ADD USER FORM -->
+            <div class="bg-white p-6 rounded-xl shadow mb-6">
 
+                <h3 class="font-semibold text-lg mb-4">
+                    Add Kitchen User
+                </h3>
 
-                <button type="button"
-        onclick="createUser()"
-        class="bg-emerald-600 text-white px-4 py-2 rounded">
-    Create
-</button>
+                <form id="kitchen-form"
+                      method="POST"
+                      action="/api/kitchen-users"
+                      onsubmit="return false;"
+                      class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
-            </form>
-        </div>
+                    <input id="email"
+                           name="email"
+                           type="email"
+                           placeholder="Email"
+                           class="border px-4 py-2 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                           required>
 
-        <!-- USERS LIST -->
-        <div class="bg-white rounded-lg shadow max-w-3xl">
-            <table class="w-full">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="p-3 text-left">Email</th>
-                        <th class="p-3 text-center">Action</th>
-                    </tr>
-                </thead>
-                <tbody id="user-table">
+                    <input id="password"
+                           name="password"
+                           type="password"
+                           placeholder="Password"
+                           class="border px-4 py-2 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                           required>
+
+                    <button type="button"
+                            onclick="createUser()"
+                            class="bg-emerald-600 hover:bg-emerald-700
+                                   text-white px-4 py-2 rounded-lg font-semibold">
+                        Create
+                    </button>
+                </form>
+            </div>
+
+            <!-- USERS LIST -->
+            <div class="bg-white rounded-xl shadow overflow-hidden">
+
+                <div class="p-4 border-b font-semibold">
+                    Existing Kitchen Users
+                </div>
+
+                <!-- Desktop Table -->
+                <table class="w-full text-left hidden sm:table">
+                    <thead class="bg-gray-50 text-sm uppercase">
+                        <tr>
+                            <th class="p-4">Email</th>
+                            <th class="p-4 text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-table">
+                        {% for u in users %}
+                        <tr class="border-t">
+                            <td class="p-4">{{ u.username }}</td>
+                            <td class="p-4 text-center">
+                                <button onclick="deleteUser({{ u.id }})"
+                                        class="text-red-600 hover:underline font-semibold">
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <!-- Mobile Cards -->
+                <div class="sm:hidden divide-y">
                     {% for u in users %}
-                    <tr class="border-t">
-                        <td class="p-3">{{ u.username }}</td>
-                        <td class="p-3 text-center">
-                            <button
-                                onclick="deleteUser({{ u.id }})"
-                                class="text-red-600 hover:underline"
-                            >
-                                Delete
-                            </button>
-                        </td>
-                    </tr>
+                    <div class="p-4 flex justify-between items-center">
+                        <div class="text-sm break-all">
+                            {{ u.username }}
+                        </div>
+                        <button onclick="deleteUser({{ u.id }})"
+                                class="text-red-600 text-sm font-semibold">
+                            Delete
+                        </button>
+                    </div>
                     {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                </div>
 
+            </div>
+
+        </div>
     </main>
 </div>
 
+<script>
+function toggleSidebar() {
+    document.getElementById("sidebar")
+        .classList.toggle("-translate-x-full");
+
+    document.getElementById("sidebar-overlay")
+        .classList.toggle("hidden");
+}
+</script>
+
 <script src="{{ url_for('static', filename='js/kitchen_users.js') }}"></script>
+
 </body>
 </html>

@@ -1,19 +1,126 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Complete Google Signup</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<title>Complete Google Signup | QR-Order</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <!-- Reuse your existing auth styles -->
-    <link rel="stylesheet" href="/static/css/login.css">
+<link rel="stylesheet" href="/static/css/login.css">
+
+<style>
+body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #111827, #1f2937);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.auth-container {
+    width: 100%;
+    max-width: 480px;
+}
+
+.auth-card {
+    background: white;
+    padding: 32px;
+    border-radius: 20px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.35);
+}
+
+.auth-title {
+    text-align: center;
+    font-size: 24px;
+    font-weight: 800;
+    margin-bottom: 10px;
+}
+
+.auth-subtitle {
+    text-align: center;
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 20px;
+}
+
+.auth-error {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 10px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.auth-form input,
+.auth-form textarea {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 14px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    font-size: 14px;
+}
+
+.auth-form input:focus,
+.auth-form textarea:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16,185,129,0.15);
+}
+
+.subdomain-wrapper {
+    display: flex;
+}
+
+.subdomain-wrapper input {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.subdomain-suffix {
+    background: #f3f4f6;
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    border-left: none;
+    border-top-right-radius: 12px;
+    border-bottom-right-radius: 12px;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.auth-button {
+    width: 100%;
+    padding: 14px;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.auth-button:hover {
+    background: #059669;
+}
+
+.auth-footer {
+    text-align: center;
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 18px;
+}
+</style>
 </head>
+
 <body>
 
 <div class="auth-container">
     <div class="auth-card">
 
-        <h2 class="auth-title">Create Restaurant Account</h2>
+        <h2 class="auth-title">Launch Your Restaurant 🚀</h2>
 
         <p class="auth-subtitle">
             Signed in with Google as<br>
@@ -21,9 +128,9 @@
         </p>
 
         {% if error %}
-            <div class="auth-error">
-                {{ error }}
-            </div>
+        <div class="auth-error">
+            {{ error }}
+        </div>
         {% endif %}
 
         <form method="POST" class="auth-form">
@@ -35,12 +142,17 @@
                 required
             >
 
-            <input
-                type="text"
-                name="subdomain"
-                placeholder="Subdomain (e.g. alexa)"
-                required
-            >
+            <div class="subdomain-wrapper">
+                <input
+                    type="text"
+                    name="subdomain"
+                    placeholder="yourname"
+                    required
+                >
+                <div class="subdomain-suffix">
+                    .qrorder.com
+                </div>
+            </div>
 
             <input
                 type="text"
@@ -67,7 +179,7 @@
         </form>
 
         <p class="auth-footer">
-            By continuing, you agree to our terms and privacy policy.
+            You can update these details anytime from your dashboard.
         </p>
 
     </div>

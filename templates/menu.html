@@ -58,70 +58,85 @@
   </style>
 </head>
 
-<body class="bg-gray-50">
-  <div class="flex h-screen">
+<body class="bg-gray-50 overflow-x-hidden">
 
-    <!-- SIDEBAR -->
-    <aside class="w-64 bg-gray-900 text-white hidden md:flex flex-col">
-      <div class="p-6 text-2xl font-bold border-b border-gray-800 flex items-center gap-2">
-        <span class="text-emerald-500"><i class="fas fa-utensils"></i></span>
-        QR-Order
-      </div>
+<div class="flex min-h-screen">
 
-      <nav class="flex-1 mt-4">
-        <a href="/admin" class="sidebar-item flex items-center py-3 px-6">
-          <i class="fas fa-chart-line mr-3"></i> Dashboard
-        </a>
+  <!-- MOBILE OVERLAY -->
+  <div id="sidebar-overlay"
+       onclick="toggleSidebar()"
+       class="fixed inset-0 bg-black/40 hidden z-40 md:hidden"></div>
 
-        <a href="/menu" class="sidebar-item active-nav flex items-center py-3 px-6">
-          <i class="fas fa-hamburger mr-3"></i> Manage Menu
-        </a>
+  <!-- SIDEBAR -->
+  <aside id="sidebar"
+    class="fixed md:static inset-y-0 left-0 w-64 bg-gray-900 text-white transform -translate-x-full md:translate-x-0 transition duration-200 z-50 flex flex-col">
 
-        <a href="/admin/qr" class="sidebar-item flex items-center py-3 px-6">
-          <i class="fas fa-th-large mr-3"></i> Tables & QRs
-        </a>
+    <div class="p-6 text-2xl font-bold border-b border-gray-800 flex items-center gap-2">
+      <span class="text-emerald-500"><i class="fas fa-utensils"></i></span>
+      QR-Order
+    </div>
 
-        <a href="/admin/kitchen-users" class="sidebar-item flex items-center py-3 px-6">
-          <i class="fas fa-utensils mr-3"></i> Kitchen Users
-        </a>
+    <nav class="flex-1 mt-4 text-sm">
+      <a href="/admin" class="sidebar-item flex items-center py-3 px-6">
+        <i class="fas fa-chart-line mr-3"></i> Dashboard
+      </a>
 
-        <a href="/admin/profile" class="sidebar-item flex items-center py-3 px-6">
-          <i class="fas fa-user mr-3"></i> Profile
-        </a>
-      </nav>
+      <a href="/menu" class="sidebar-item active-nav flex items-center py-3 px-6">
+        <i class="fas fa-hamburger mr-3"></i> Manage Menu
+      </a>
 
-      <div class="p-4 border-t border-gray-800">
-        <a href="/logout" class="block w-full text-center bg-red-600 hover:bg-red-700 py-2 rounded-lg">
-          <i class="fas fa-sign-out-alt"></i> Logout
-        </a>
-      </div>
-    </aside>
+      <a href="/admin/qr" class="sidebar-item flex items-center py-3 px-6">
+        <i class="fas fa-th-large mr-3"></i> Tables & QRs
+      </a>
 
-    <!-- MAIN -->
-    <main class="flex-1 p-6 overflow-y-auto">
+      <a href="/admin/kitchen-users" class="sidebar-item flex items-center py-3 px-6">
+        <i class="fas fa-utensils mr-3"></i> Kitchen Users
+      </a>
 
-      <!-- HEADER -->
-      <div class="flex justify-between mb-6">
-        <h2 class="text-3xl font-bold">Menu Management</h2>
-        <button onclick="openAddModal()" class="bg-emerald-600 text-white px-6 py-3 rounded">
-          <i class="fas fa-plus"></i> Add Dish
+      <a href="/admin/profile" class="sidebar-item flex items-center py-3 px-6">
+        <i class="fas fa-user mr-3"></i> Profile
+      </a>
+    </nav>
+
+    <div class="p-4 border-t border-gray-800">
+      <a href="/logout"
+         class="block w-full text-center bg-red-600 hover:bg-red-700 py-2.5 rounded-lg font-semibold">
+        <i class="fas fa-sign-out-alt"></i> Logout
+      </a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="flex-1 w-full overflow-y-auto">
+
+    <!-- HEADER -->
+    <header class="bg-white shadow-sm px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-30">
+      <div class="flex items-center gap-3">
+        <button onclick="toggleSidebar()" class="md:hidden text-2xl">
+          <i class="fas fa-bars"></i>
         </button>
+        <h2 class="text-lg sm:text-2xl font-bold">Menu Management</h2>
       </div>
 
-      <!-- CATEGORY TABS -->
-      <div class="flex gap-2 mb-6" id="categoryTabs">
-        <button onclick="setCategory(this, '')" class="category-tab active-tab">All</button>
-        <button onclick="setCategory(this, 'Starters')" class="category-tab">Starters</button>
-        <button onclick="setCategory(this, 'Main Course')" class="category-tab">Main Course</button>
-        <button onclick="setCategory(this, 'Beverages')" class="category-tab">Beverages</button>
+      <button onclick="openAddModal()"
+              class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 sm:px-6 py-2.5 rounded-lg text-sm sm:text-base">
+        <i class="fas fa-plus"></i> Add Dish
+      </button>
+    </header>
+
+    <div class="px-4 sm:px-6 py-6 max-w-7xl mx-auto">
+
+      <!-- CATEGORY TABS (Scrollable on mobile) -->
+      <div class="flex gap-2 overflow-x-auto pb-2 mb-6" id="categoryTabs">
+        <button onclick="setCategory(this, '')" class="category-tab active-tab whitespace-nowrap">All</button>
+        <button onclick="setCategory(this, 'Starters')" class="category-tab whitespace-nowrap">Starters</button>
+        <button onclick="setCategory(this, 'Main Course')" class="category-tab whitespace-nowrap">Main Course</button>
+        <button onclick="setCategory(this, 'Beverages')" class="category-tab whitespace-nowrap">Beverages</button>
       </div>
 
       <!-- QUICK TEMPLATES -->
       <div class="bg-white p-5 rounded-xl shadow mb-6">
         <h3 class="font-bold text-lg mb-2">⚡ Quick Menu Templates</h3>
-        <p class="text-sm text-gray-500 mb-4">
-          Auto-add popular dishes. You can edit or delete them later.
-        </p>
 
         <div class="flex flex-wrap gap-3">
           <button onclick="importTemplate('punjabi')" class="template-btn">Punjabi</button>
@@ -132,144 +147,24 @@
         </div>
       </div>
 
-      <!-- SEARCH + FILTER -->
-      <div class="flex gap-3 mb-6">
+      <!-- SEARCH -->
+      <div class="mb-6">
         <input
           id="menuSearch"
           type="text"
           placeholder="Search dish..."
-          class="w-full border px-4 py-2 rounded-lg"
-          oninput="applyFilters()"
-        />
-
-        <select
-          id="categoryFilter"
-          class="border px-4 py-2 rounded-lg"
-          onchange="applyFilters()"
-        >
-          <option value="">All</option>
-          <option value="Starters">Starters</option>
-          <option value="Main Course">Main Course</option>
-          <option value="Beverages">Beverages</option>
-        </select>
+          class="w-full border px-4 py-3 rounded-lg"
+          oninput="applyFilters()" />
       </div>
 
       <!-- MENU GRID -->
-      <div
-        id="menu-grid"
-        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-      ></div>
-
-    </main>
-  </div>
-
-  <!-- ADD DISH MODAL -->
-  <div id="item-modal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-    <div class="bg-white rounded-xl w-full max-w-md p-6 relative">
-      <button onclick="closeAddModal()" class="absolute top-4 right-4 text-xl">&times;</button>
-
-      <h3 class="text-xl font-bold mb-6">Add Dish</h3>
-
-      <form id="menu-form" method="POST" enctype="multipart/form-data" class="space-y-5">
-        <input name="name" placeholder="Dish Name" required class="w-full border px-4 py-3 rounded-xl" />
-
-        <div class="grid grid-cols-2 gap-4">
-          <input name="price" type="number" placeholder="Price ₹" required class="border px-4 py-3 rounded-xl" />
-
-          <select name="category" class="border px-4 py-3 rounded-xl">
-            <option>Starters</option>
-            <option>Main Course</option>
-            <option>Beverages</option>
-          </select>
-        </div>
-
-        <input name="image" type="file" accept="image/*" required />
-
-        <button class="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold">
-          Save Dish
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- EDIT MODAL -->
-<div id="edit-modal"
-     class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-
-  <div class="bg-white rounded-xl w-full max-w-md p-6 relative">
-    <button onclick="closeEditModal()"
-            class="absolute top-4 right-4 text-xl">&times;</button>
-
-    <h3 class="text-xl font-bold mb-4">Edit Dish</h3>
-
-    <form id="edit-form" class="space-y-4" enctype="multipart/form-data">
-
-      <!-- IMPORTANT -->
-      <input type="hidden" id="edit-id" name="id" />
-
-      <input
-        id="edit-name"
-        name="name"
-        type="text"
-        required
-        class="w-full border p-3 rounded"
-      />
-
-      <select
-        id="edit-category"
-        name="category"
-        class="w-full border p-3 rounded">
-        <option>Starters</option>
-        <option>Main Course</option>
-        <option>Beverages</option>
-      </select>
-
-      <input
-        id="edit-price"
-        name="price"
-        type="number"
-        step="0.01"
-        required
-        class="w-full border p-3 rounded"
-      />
-
-      <input
-        id="edit-image"
-        name="image"
-        type="file"
-        accept="image/*"
-      />
-
-      <button
-        class="w-full bg-emerald-600 hover:bg-emerald-700
-               text-white py-3 rounded-xl font-bold">
-        Save Changes
-      </button>
-    </form>
-  </div>
-</div>
-
-  <!-- ADD TO ORDER MODAL -->
-  <div id="addToOrderModal" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-    <div class="bg-white rounded-xl w-full max-w-sm p-6">
-      <h3 id="modal-item-name" class="text-lg font-bold mb-2"></h3>
-
-      <input
-        type="number"
-        id="modal-qty"
-        min="1"
-        value="1"
-        class="w-full border px-4 py-2 rounded-lg mb-4"
-      />
-
-      <div class="flex justify-end gap-3">
-        <button onclick="closeAddToOrderModal()">Cancel</button>
-        <button onclick="confirmAddToOrder()" class="bg-emerald-600 text-white px-4 py-2 rounded">
-          Add Item
-        </button>
+      <div id="menu-grid"
+           class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
       </div>
+
     </div>
-  </div>
+  </main>
+</div>
 
   <!-- JS -->
   <script src="{{ url_for('static', filename='js/menu.js') }}"></script>

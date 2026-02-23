@@ -52,6 +52,21 @@ def calculate_bill(items, gst_rate=0.05):
     total = round(subtotal + cgst + sgst, 2)
 
     return subtotal, cgst, sgst, total
+def check_subscription():
+    rid = session.get("restaurant_id")
+    if not rid:
+        return True
+
+    r = fetchone(sql("""
+        SELECT trial_expires_at
+        FROM restaurants
+        WHERE id=?
+    """), (rid,))
+
+    if r and r["trial_expires_at"] and r["trial_expires_at"] < datetime.utcnow():
+        return False
+
+    return True
 # --------------------------------------------------
 # CONFIG
 # --------------------------------------------------
@@ -169,10 +184,10 @@ def login():
 @app.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
     if request.method == "POST":
-        email = request.form["email"]
+        email = request.form["email"].strip().lower()
 
         user = fetchone(
-            sql("SELECT id FROM users WHERE username=?"),
+            sql("SELECT * FROM users WHERE username=?"),
             (email,)
         )
 
@@ -182,13 +197,95 @@ def forgot_password():
                 error="No account found with this email"
             )
 
-        return render_template(
-            "forgot_password.html",
-            success="Password reset link sent (demo mode)"
-        )
+        otp = generate_otp()
+
+        execute(sql("""
+            UPDATE users
+            SET otp_code=?,
+                otp_expires_at=NOW() + INTERVAL '10 minutes'
+            WHERE username=?
+        """), (otp, email))
+
+        commit()
+
+        send_otp_email(email, otp)
+
+        session.clear()
+        session["reset_email"] = email
+
+        return redirect("/reset-verify")
 
     return render_template("forgot_password.html")
+@app.route("/reset-verify", methods=["GET", "POST"])
+def reset_verify():
+    email = session.get("reset_email")
 
+    if not email:
+        return redirect("/forgot-password")
+
+    if request.method == "POST":
+        code = request.form["otp"]
+
+        user = fetchone(sql("""
+            SELECT *
+            FROM users
+            WHERE username=?
+              AND otp_code=?
+              AND otp_expires_at > NOW()
+        """), (email, code))
+
+        if not user:
+            return render_template(
+                "reset_verify.html",
+                error="Invalid or expired OTP"
+            )
+
+        # OTP valid → allow password reset
+        session["allow_password_reset"] = True
+        return redirect("/reset-password")
+
+    return render_template("reset_verify.html")
+@app.route("/reset-password", methods=["GET", "POST"])
+def reset_password():
+    email = session.get("reset_email")
+
+    if not email or not session.get("allow_password_reset"):
+        return redirect("/forgot-password")
+
+    if request.method == "POST":
+        password = request.form["password"]
+        confirm = request.form["confirm_password"]
+
+        if password != confirm:
+            return render_template(
+                "reset_password.html",
+                error="Passwords do not match"
+            )
+
+        if len(password) < 6:
+            return render_template(
+                "reset_password.html",
+                error="Password must be at least 6 characters"
+            )
+
+        execute(sql("""
+            UPDATE users
+            SET password=?,
+                otp_code=NULL,
+                otp_expires_at=NULL
+            WHERE username=?
+        """), (
+            generate_password_hash(password),
+            email
+        ))
+
+        commit()
+
+        session.clear()
+
+        return redirect("/login")
+
+    return render_template("reset_password.html")
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
@@ -206,8 +303,11 @@ def signup():
             otp = generate_otp()
 
             cursor = execute(sql("""
-                INSERT INTO restaurants (name, subdomain, gstin, phone, address)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO restaurants
+                (name, subdomain, gstin, phone, address,
+                 trial_start, trial_expires_at)
+                VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP,
+                        CURRENT_TIMESTAMP + INTERVAL '14 days')
                 RETURNING id
             """), (
                 request.form["restaurant_name"],
@@ -239,12 +339,10 @@ def signup():
 
             commit()
 
-        except Exception as e:
-            current_app.logger.exception(e)
+        except Exception:
             get_db().rollback()
             return render_template("signup.html", error="Signup failed.")
 
-        # 🔥 Send OTP safely
         send_otp_email(email, otp)
 
         session.clear()
@@ -275,8 +373,12 @@ def onboarding():
             )
 
         cursor = execute(sql("""
-            INSERT INTO restaurants (name, subdomain, phone, address)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO restaurants
+            (name, subdomain, phone, address,
+             trial_start, trial_expires_at)
+            VALUES (?, ?, ?, ?,
+                    CURRENT_TIMESTAMP,
+                    CURRENT_TIMESTAMP + INTERVAL '14 days')
             RETURNING id
         """), (
             request.form["restaurant_name"],
@@ -306,9 +408,6 @@ def onboarding():
 
 @app.route("/google/after-login")
 def google_after_login():
-    SUPERADMIN_EMAIL = os.getenv("SUPERADMIN_EMAIL")
-    if email == SUPERADMIN_EMAIL:
-        return redirect("/login")
     if not google.authorized:
         return redirect("/login")
 
@@ -321,18 +420,24 @@ def google_after_login():
     name = info.get("name", "")
     google_id = info.get("id")
 
+    SUPERADMIN_EMAIL = os.getenv("SUPERADMIN_EMAIL")
+    if SUPERADMIN_EMAIL and email == SUPERADMIN_EMAIL:
+        session.clear()
+        session["user"] = email
+        session["role"] = "superadmin"
+        return redirect("/platform/restaurants")
+
     user = fetchone(
         sql("SELECT * FROM users WHERE username=?"),
         (email,)
     )
 
-    # ✅ EXISTING USER
+    # Existing user
     if user:
         session.clear()
         session["user"] = user["username"]
         session["role"] = user["role"]
 
-        # 🚨 IMPORTANT: restaurant missing → onboarding
         if not user["restaurant_id"]:
             session["pending_google_user"] = user["id"]
             session["pending_email"] = email
@@ -342,7 +447,7 @@ def google_after_login():
         session["restaurant_id"] = user["restaurant_id"]
         return redirect("/admin")
 
-    # 🆕 BRAND NEW GOOGLE USER
+    # New Google user
     cursor = execute(sql("""
         INSERT INTO users
         (username, password, role, is_verified, auth_provider)
@@ -362,8 +467,6 @@ def google_after_login():
     session["pending_name"] = name
 
     return redirect("/onboarding")
-
-
 @app.route("/verify-email", methods=["GET", "POST"])
 def verify_email():
     email = session.get("pending_email")
@@ -375,14 +478,16 @@ def verify_email():
         code = request.form["otp"]
 
         user = fetchone(sql("""
-            SELECT * FROM users
+            SELECT *
+            FROM users
             WHERE username=?
-            AND otp_code=?
-            AND otp_expires_at > NOW()
+              AND otp_code=?
+              AND otp_expires_at > NOW()
         """), (email, code))
 
         if not user:
-            return render_template("verify_email.html", error="Invalid or expired OTP")
+            return render_template("verify_email.html",
+                                   error="Invalid or expired OTP")
 
         execute(sql("""
             UPDATE users
@@ -391,7 +496,6 @@ def verify_email():
                 otp_expires_at=NULL
             WHERE username=?
         """), (email,))
-
         commit()
 
         session.clear()
@@ -399,12 +503,27 @@ def verify_email():
         session["role"] = user["role"]
         session["restaurant_id"] = user["restaurant_id"]
 
-        return redirect(
-            "/admin" if user["role"] == "admin" else "/kitchen"
-        )
+        return redirect("/admin")
 
     return render_template("verify_email.html")
+@app.route("/resend-otp")
+def resend_otp():
+    email = session.get("pending_email")
+    if not email:
+        return redirect("/login")
 
+    otp = generate_otp()
+
+    execute(sql("""
+        UPDATE users
+        SET otp_code=?, otp_expires_at=NOW() + INTERVAL '10 minutes'
+        WHERE username=?
+    """), (otp, email))
+
+    commit()
+    send_otp_email(email, otp)
+
+    return redirect("/verify-email")
 @app.route("/logout")
 def logout():
     session.clear()
@@ -418,7 +537,7 @@ def logout():
 @login_required("superadmin")
 def platform_restaurants():
     rows = fetchall(sql("""
-        SELECT r.id, r.name, r.subdomain,
+        SELECT r.id, r.name, r.subdomain, r.created_at,
        COUNT(o.id) AS total_orders,
        COALESCE(SUM(o.total), 0) AS total_revenue
         FROM restaurants r
@@ -642,6 +761,9 @@ def close_order(order_id):
 @app.route("/admin")
 @login_required(["admin", "superadmin"])
 def admin():
+    if session["role"] == "admin" and not check_subscription():
+        return "Subscription expired. Please upgrade.", 403
+
     return render_template("admin.html")
 
 @app.route("/api/order/<int:order_id>/add-item", methods=["POST"])

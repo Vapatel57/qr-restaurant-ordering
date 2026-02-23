@@ -12,19 +12,21 @@
 
 <body class="bg-gray-100 min-h-screen">
 
-<div class="max-w-6xl mx-auto p-6">
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-6">
 
     <!-- HEADER -->
-    <div class="flex justify-between items-center mb-6">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
         <div>
-            <h1 class="text-2xl font-bold">Edit Bill</h1>
+            <h1 class="text-xl sm:text-2xl font-bold">
+                Edit Bill
+            </h1>
             <p class="text-sm text-gray-500">
                 Table {{ order.table_no }} · Order #{{ order.id }}
             </p>
         </div>
 
         <a href="/admin"
-           class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded">
+           class="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg text-sm w-fit">
             ← Back to Dashboard
         </a>
     </div>
@@ -33,33 +35,39 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         <!-- LEFT: CURRENT ITEMS -->
-        <div class="lg:col-span-2 bg-white rounded-xl shadow">
+        <div class="lg:col-span-2 bg-white rounded-xl shadow flex flex-col">
 
-            <div class="p-4 border-b font-bold">
+            <div class="p-4 border-b font-semibold">
                 Current Items
             </div>
 
-            <div class="divide-y">
+            <div class="divide-y flex-1">
+
                 {% for i in items %}
-                <div class="flex items-center justify-between p-4">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
+
                     <div>
-                        <p class="font-semibold">{{ i.name }}</p>
-                        <p class="text-sm text-gray-500">
+                        <p class="font-semibold text-sm sm:text-base">
+                            {{ i.name }}
+                        </p>
+                        <p class="text-xs sm:text-sm text-gray-500">
                             Qty: {{ i.qty }} × ₹{{ i.price }}
                         </p>
                     </div>
 
-                    <div class="flex items-center gap-4">
-                        <p class="font-bold">
+                    <div class="flex items-center justify-between sm:justify-end gap-4">
+                        <p class="font-bold text-emerald-600">
                             ₹{{ i.qty * i.price }}
                         </p>
 
                         <button
                             onclick="removeItem('{{ i.name }}')"
-                            class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm">
+                            class="bg-red-500 hover:bg-red-600
+                                   text-white px-3 py-2 rounded-lg text-sm">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
+
                 </div>
                 {% endfor %}
 
@@ -68,6 +76,7 @@
                     No items in this order
                 </p>
                 {% endif %}
+
             </div>
 
             <!-- TOTALS -->
@@ -76,7 +85,7 @@
                 <p class="text-sm text-gray-500">
                     GST (5%): ₹{{ gst }}
                 </p>
-                <p class="text-xl font-bold text-emerald-600">
+                <p class="text-lg sm:text-xl font-bold text-emerald-600">
                     Grand Total: ₹{{ total }}
                 </p>
             </div>
@@ -85,33 +94,34 @@
         <!-- RIGHT: ADD ITEM -->
         <div class="bg-white rounded-xl shadow">
 
-            <div class="p-4 border-b font-bold">
+            <div class="p-4 border-b font-semibold">
                 Add Item
             </div>
 
-            <div class="p-4 space-y-3">
+            <div class="p-4 space-y-4">
 
                 <input id="menu-search"
                        type="text"
                        placeholder="Search item..."
-                       class="w-full border p-2 rounded">
+                       class="w-full border px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
 
                 <select id="menu-category"
-                        class="w-full border p-2 rounded">
+                        class="w-full border px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
                     <option value="">All Categories</option>
                 </select>
 
                 <select id="menu-items"
-                        class="w-full border p-2 rounded"></select>
+                        class="w-full border px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
+                </select>
 
                 <input id="menu-qty"
                        type="number"
                        min="1"
                        value="1"
-                       class="w-full border p-2 rounded">
+                       class="w-full border px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
 
                 <button onclick="addItemToOrder()"
-                        class="bg-emerald-600 hover:bg-emerald-700 text-white w-full py-2 rounded font-bold">
+                        class="bg-emerald-600 hover:bg-emerald-700 text-white w-full py-2.5 rounded-lg font-bold">
                     + Add Item
                 </button>
 

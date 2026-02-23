@@ -1,6 +1,7 @@
 const ordersContainer = document.getElementById("orders-container");
 const additionsContainer = document.getElementById("additions");
 const pendingCount = document.getElementById("pending-count");
+
 const lastOrderIds = new Set();
 const lastAdditionIds = new Set();
 const updatingOrders = new Set();
@@ -15,11 +16,18 @@ function playSound() {
     }
 }
 
-/* ================= ORDERS ================= */
+/* ================= STATUS COLORS ================= */
+
+function getStatusColor(status) {
+    if (status === "Received") return "border-yellow-500";
+    if (status === "Preparing") return "border-blue-500";
+    if (status === "Ready") return "border-emerald-500";
+    return "border-gray-500";
+}
+
+/* ================= RENDER ORDERS ================= */
 
 function renderOrders(orders) {
-    ordersContainer.innerHTML = "";
-
     const activeOrders = orders.filter(o =>
         ["Received", "Preparing", "Ready"].includes(o.status)
     );
@@ -27,64 +35,76 @@ function renderOrders(orders) {
     pendingCount.innerText = activeOrders.length;
 
     if (!activeOrders.length) {
-        ordersContainer.innerHTML = `
-            <div class="text-gray-400 text-xl">
-                No active orders 👨‍🍳
-            </div>
-        `;
+        ordersContainer.innerHTML =
+            `<div class="text-gray-400 text-xl">No active orders 👨‍🍳</div>`;
         return;
     }
 
-    activeOrders.forEach(o => {
+    ordersContainer.innerHTML = activeOrders.map(o => {
+
         const items = Array.isArray(o.items)
             ? o.items
             : JSON.parse(o.items || "[]");
 
         const itemHtml = items
-            .map(i => `${i.qty} × ${i.name}`)
-            .join("<br>");
+            .map(i => `<div class="mb-1">${i.qty} × ${i.name}</div>`)
+            .join("");
 
         const nextStatus =
             o.status === "Received" ? "Preparing" :
             o.status === "Preparing" ? "Ready" :
             "Served";
 
-        ordersContainer.innerHTML += `
-            <div class="bg-white w-80 rounded-xl shadow-xl text-gray-900">
-                <div class="p-4 border-b">
-                    <h2 class="text-3xl font-black">TABLE ${o.table_no}</h2>
-                    <p class="text-xs text-gray-400">ORDER #${o.id}</p>
+        return `
+            <div class="bg-white w-96 rounded-xl shadow-xl text-gray-900 border-t-8 ${getStatusColor(o.status)}">
+
+                <div class="p-5 border-b">
+                    <h2 class="text-4xl font-black">
+                        TABLE ${o.table_no}
+                    </h2>
+                    <p class="text-sm text-gray-500">
+                        ORDER #${o.id}
+                    </p>
+                    <p class="text-xs font-bold mt-1">
+                        ${o.status}
+                    </p>
                 </div>
 
-                <div class="p-4 text-sm">${itemHtml}</div>
+                <div class="p-5 text-lg font-semibold leading-relaxed max-h-72 overflow-y-auto">
+                    ${itemHtml}
+                </div>
 
-                <div class="p-4 bg-gray-50">
+                <div class="p-5 bg-gray-100">
                     <button
                         onclick="updateStatus(${o.id}, '${nextStatus}')"
-                        class="w-full py-3 bg-emerald-600 text-white rounded-lg font-bold">
+                        class="w-full py-4 bg-emerald-600 text-white rounded-lg text-lg font-bold hover:bg-emerald-700">
                         Mark ${nextStatus}
                     </button>
                 </div>
+
             </div>
         `;
-    });
+    }).join("");
 }
+
+/* ================= LOAD ORDERS ================= */
 
 function loadKitchenOrders() {
     fetch("/api/kitchen/orders")
         .then(res => res.json())
         .then(orders => {
-            let hasNewOrder = false;
+
+            let hasNew = false;
 
             orders.forEach(o => {
                 if (!lastOrderIds.has(o.id)) {
                     lastOrderIds.add(o.id);
-                    hasNewOrder = true;
+                    hasNew = true;
                 }
             });
 
-            if (hasNewOrder && orders.length > 0) {
-                playSound(); // 🔔 NEW ORDER ALERT
+            if (hasNew && orders.length > 0) {
+                playSound();
             }
 
             renderOrders(orders);
@@ -92,23 +112,27 @@ function loadKitchenOrders() {
         .catch(err => console.error("Kitchen orders error:", err));
 }
 
-
-/* ================= ADDITIONS (WITH SOUND) ================= */
+/* ================= ADDITIONS ================= */
 
 function renderAdditions(additions) {
     if (!additions.length) {
         additionsContainer.innerHTML =
-            `<p class="text-gray-400">No new additions</p>`;
+            `<p class="text-gray-500">No new additions</p>`;
         return;
     }
 
     additionsContainer.innerHTML = additions.map(a => `
-        <div class="bg-red-600 text-white p-4 rounded-lg mb-3">
-            <h3 class="font-black">TABLE ${a.table_no}</h3>
-            <p>${a.qty} × ${a.item_name}</p>
+        <div class="bg-red-600 text-white p-4 rounded-lg shadow">
+            <h3 class="text-lg font-black">
+                TABLE ${a.table_no}
+            </h3>
+            <p class="text-sm mt-1">
+                ${a.qty} × ${a.item_name}
+            </p>
+
             <button
                 onclick="markAdditionDone(${a.id})"
-                class="mt-3 bg-black px-4 py-2 rounded">
+                class="mt-4 bg-black w-full py-2 rounded font-bold">
                 Mark Preparing
             </button>
         </div>
@@ -119,6 +143,7 @@ function loadKitchenAdditions() {
     fetch("/api/kitchen/additions")
         .then(res => res.json())
         .then(additions => {
+
             let hasNew = false;
 
             additions.forEach(a => {
@@ -142,13 +167,11 @@ async function updateStatus(orderId, status) {
     updatingOrders.add(orderId);
 
     try {
-        const res = await fetch(`/api/order/${orderId}/status`, {
+        await fetch(`/api/order/${orderId}/status`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ status })
         });
-
-        if (!res.ok) throw new Error();
 
         loadKitchenOrders();
     } catch {
@@ -163,8 +186,7 @@ function markAdditionDone(id) {
         .then(() => {
             loadKitchenAdditions();
             loadKitchenOrders();
-        })
-        .catch(() => alert("Failed to update addition"));
+        });
 }
 
 /* ================= INIT ================= */

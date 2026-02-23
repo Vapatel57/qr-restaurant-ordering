@@ -10,9 +10,9 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 
-<body class="bg-gray-100 font-sans">
+<body class="bg-gray-100 font-sans overflow-x-hidden">
 
-<div class="flex min-h-screen bg-gray-100">
+<div class="flex min-h-screen">
 
     <!-- MOBILE OVERLAY -->
     <div id="sidebar-overlay"
@@ -27,7 +27,7 @@
             <span class="text-emerald-500"><i class="fas fa-utensils"></i></span> QR-Order
         </div>
 
-        <nav class="flex-1 mt-4">
+        <nav class="flex-1 mt-4 text-sm">
             <a class="flex items-center py-3 px-6 bg-gray-700 border-l-4 border-emerald-500">
                 <i class="fas fa-chart-line mr-3"></i> Dashboard
             </a>
@@ -47,88 +47,95 @@
 
         <div class="p-4 border-t border-gray-800">
             <a href="/logout"
-               class="block w-full text-center bg-red-600 hover:bg-red-700 py-2 rounded-lg">
+               class="block w-full text-center bg-red-600 hover:bg-red-700 py-2.5 rounded-lg font-semibold">
                 <i class="fas fa-sign-out-alt"></i> Logout
             </a>
         </div>
     </aside>
 
     <!-- MAIN -->
-    <main class="flex-1 overflow-y-auto">
+    <main class="flex-1 w-full overflow-y-auto">
 
         <!-- HEADER -->
-        <header class="bg-white shadow-sm p-4 flex items-center justify-between sticky top-0 z-40">
+        <header class="bg-white shadow-sm px-4 sm:px-6 py-4 flex items-center justify-between sticky top-0 z-30">
 
             <div class="flex items-center gap-3">
                 <button onclick="toggleSidebar()" class="md:hidden text-2xl">
                     <i class="fas fa-bars"></i>
                 </button>
-                <h2 class="text-xl font-semibold">Live Dashboard</h2>
+                <h2 class="text-lg sm:text-xl font-semibold">Live Dashboard</h2>
             </div>
 
             <button onclick="openHistory()"
-                    class="bg-gray-800 text-white px-3 py-2 rounded text-sm">
+                    class="bg-gray-800 hover:bg-gray-900 transition text-white px-4 py-2 rounded-lg text-sm">
                 📅 History
             </button>
         </header>
 
-        <div class="p-4 sm:p-6">
+        <div class="px-4 sm:px-6 py-6 max-w-7xl mx-auto">
 
             <!-- STATS -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                <div class="bg-white p-4 sm:p-6 rounded-xl shadow">
-                    <p class="text-gray-500 text-sm font-bold uppercase">Orders Today</p>
-                    <h3 class="text-3xl font-bold" id="order-count">0</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-6">
+
+                <div class="bg-white p-5 sm:p-6 rounded-xl shadow">
+                    <p class="text-gray-500 text-xs font-bold uppercase">Orders Today</p>
+                    <h3 class="text-3xl font-bold mt-2" id="order-count">0</h3>
                 </div>
 
-                <div class="bg-white p-4 sm:p-6 rounded-xl shadow">
-                    <p class="text-gray-500 text-sm font-bold uppercase">Pending</p>
-                    <h3 class="text-3xl font-bold text-orange-500" id="pending-count">0</h3>
+                <div class="bg-white p-5 sm:p-6 rounded-xl shadow">
+                    <p class="text-gray-500 text-xs font-bold uppercase">Pending</p>
+                    <h3 class="text-3xl font-bold text-orange-500 mt-2" id="pending-count">0</h3>
                 </div>
 
-                <div class="bg-white p-4 sm:p-6 rounded-xl shadow">
-                    <p class="text-gray-500 text-sm font-bold uppercase">Today Revenue</p>
-                    <h3 class="text-3xl font-bold text-emerald-600" id="today-revenue">₹0</h3>
+                <div class="bg-white p-5 sm:p-6 rounded-xl shadow">
+                    <p class="text-gray-500 text-xs font-bold uppercase">Today Revenue</p>
+                    <h3 class="text-3xl font-bold text-emerald-600 mt-2" id="today-revenue">₹0</h3>
                 </div>
+
             </div>
 
             <!-- ORDERS -->
             <div class="bg-white rounded-xl shadow overflow-hidden">
-                <div class="p-5 border-b font-bold">Today's Orders</div>
+                <div class="p-5 border-b font-semibold text-sm sm:text-base">
+                    Today's Orders
+                </div>
 
                 <!-- Desktop Table -->
-                <table class="w-full text-left hidden md:table">
-                    <thead class="bg-gray-50 text-sm uppercase">
-                        <tr>
-                            <th class="p-4">Table</th>
-                            <th class="p-4">Items</th>
-                            <th class="p-4">Total</th>
-                            <th class="p-4">Status</th>
-                            <th class="p-4">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="order-table-body"></tbody>
-                </table>
+                <div class="overflow-x-auto hidden md:block">
+                    <table class="w-full text-left">
+                        <thead class="bg-gray-50 text-xs uppercase">
+                            <tr>
+                                <th class="p-4">Table</th>
+                                <th class="p-4">Items</th>
+                                <th class="p-4">Total</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="order-table-body"></tbody>
+                    </table>
+                </div>
 
                 <!-- Mobile Cards -->
                 <div id="mobile-orders" class="md:hidden divide-y"></div>
             </div>
+
         </div>
     </main>
 </div>
 
 <!-- HISTORY MODAL -->
 <div id="history-modal"
-     class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+     class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
 
-    <div class="bg-white p-6 rounded-xl w-[92%] sm:max-w-lg">
-        <h3 class="text-xl font-bold mb-4">Past Orders</h3>
+    <div class="bg-white p-6 rounded-xl w-full max-w-md">
+        <h3 class="text-lg font-bold mb-4">Past Orders</h3>
 
         <input type="date" id="history-date"
-               class="border p-2 rounded w-full mb-4">
+               class="border p-2.5 rounded-lg w-full mb-4">
 
         <button onclick="loadHistory()"
-                class="bg-emerald-600 text-white px-4 py-2 rounded w-full">
+                class="bg-emerald-600 hover:bg-emerald-700 transition text-white px-4 py-2.5 rounded-lg w-full font-semibold">
             Load Orders
         </button>
 

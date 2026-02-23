@@ -8,26 +8,28 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
 </head>
 
-<body class="bg-gray-50 font-sans pb-24">
+<body class="bg-gray-50 font-sans pb-28 overflow-x-hidden">
 
 <!-- HEADER -->
-<header class="bg-white p-4 shadow-sm sticky top-0 z-50">
+<header class="bg-white px-4 py-4 shadow-sm sticky top-0 z-50">
     <div class="flex justify-between items-center">
         <div>
-            <h1 class="text-xl font-bold text-gray-800">
-                Welcome to <span class="text-emerald-600">{{ restaurant_name }}</span>
+            <h1 class="text-lg sm:text-xl font-bold text-gray-800">
+                Welcome to
+                <span class="text-emerald-600">
+                    {{ restaurant_name }}
+                </span>
             </h1>
-
-            <p class="text-xs text-gray-500 font-bold uppercase tracking-widest"
+            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider"
                id="display-table">
                 Table: --
             </p>
         </div>
 
-        <div class="relative cursor-pointer" onclick="openCart()">
+        <div class="relative cursor-pointer active:scale-95 transition"
+             onclick="openCart()">
             <i class="fas fa-shopping-basket text-2xl text-gray-700"></i>
             <span id="cart-count"
                 class="absolute -top-2 -right-2 bg-red-500 text-white
@@ -36,7 +38,6 @@
                 0
             </span>
         </div>
-
     </div>
 </header>
 
@@ -46,14 +47,13 @@
         id="search-input"
         type="text"
         placeholder="Search dishes..."
-        class="w-full px-4 py-3 rounded-xl border focus:ring-2
-               focus:ring-emerald-500 outline-none">
+        class="w-full px-4 py-3 rounded-xl border bg-white
+               focus:ring-2 focus:ring-emerald-500 outline-none text-sm">
 </div>
 
 <!-- CATEGORY FILTER -->
 <div id="category-filters"
-     class="px-4 mt-4 flex gap-2 overflow-x-auto pb-2">
-</div>
+     class="px-4 mt-4 flex gap-2 overflow-x-auto pb-2"></div>
 
 <!-- MENU -->
 <main class="px-4 space-y-4 mt-4" id="customer-menu"></main>
@@ -64,96 +64,93 @@
             border-t shadow-lg flex justify-between items-center z-50">
 
     <div>
-        <p class="text-xs text-gray-500 font-bold">TOTAL</p>
-        <p class="text-xl font-black" id="total-price">₹0</p>
+        <p class="text-xs text-gray-500 font-semibold">
+            <span id="checkout-count">0</span> items
+        </p>
+        <p class="text-xl font-black text-emerald-600"
+           id="total-price">₹0</p>
     </div>
 
-    <button onclick="placeOrder()"
-            class="bg-emerald-600 text-white px-10 py-3 rounded-xl
+    <button onclick="openCart()"
+            class="bg-emerald-600 hover:bg-emerald-700
+                   text-white px-8 py-3 rounded-xl
                    font-bold shadow-lg active:scale-95 transition">
-        PLACE ORDER
+        VIEW CART
     </button>
 </div>
+
 <!-- CART MODAL -->
 <div id="cart-modal"
      class="fixed inset-0 bg-black/40 hidden z-50"
      onclick="closeCart()">
 
-    <div class="absolute bottom-0 inset-x-0 bg-white rounded-t-3xl p-4"
+    <div class="absolute bottom-0 inset-x-0 bg-white
+                rounded-t-3xl p-5 max-h-[85vh] overflow-y-auto"
          onclick="event.stopPropagation()">
 
-        <div class="flex justify-between items-center mb-3">
+        <div class="flex justify-between items-center mb-4">
             <h3 class="font-bold text-lg">Your Cart</h3>
-            <button onclick="closeCart()" class="text-gray-400 text-xl">✕</button>
+            <button onclick="closeCart()" class="text-gray-400 text-2xl">×</button>
         </div>
 
-        <div id="cart-items" class="space-y-3 max-h-64 overflow-y-auto"></div>
+        <div id="cart-items" class="space-y-4"></div>
 
         <div class="flex justify-between items-center mt-4 border-t pt-3">
-            <span class="font-bold">Total</span>
-            <span id="cart-modal-total" class="font-black text-lg">₹0</span>
+            <span class="font-semibold">Total</span>
+            <span id="cart-modal-total"
+                  class="font-black text-lg text-emerald-600">
+                ₹0
+            </span>
         </div>
+
         <!-- CUSTOMER DETAILS -->
-<div class="space-y-3 mt-3">
+        <div class="space-y-3 mt-4">
+            <input id="customer-name"
+                   type="text"
+                   placeholder="Your name"
+                   class="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none text-sm"/>
 
-    <input
-        id="customer-name"
-        type="text"
-        placeholder="Your name"
-        required
-        class="w-full border rounded-xl px-4 py-3
-               focus:ring-2 focus:ring-emerald-500 outline-none"
-    />
+            <input id="customer-phone"
+                   type="tel"
+                   placeholder="Mobile number (10 digits)"
+                   maxlength="10"
+                   class="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-emerald-500 outline-none text-sm"/>
 
-    <input
-        id="customer-phone"
-        type="tel"
-        placeholder="Mobile number (10 digits)"
-        required
-        maxlength="10"
-        class="w-full border rounded-xl px-4 py-3
-               focus:ring-2 focus:ring-emerald-500 outline-none"
-    />
-
-    <p id="form-error" class="text-red-500 text-sm hidden">
-        Please enter valid name & phone number
-    </p>
-
-</div>
-
+            <p id="form-error" class="text-red-500 text-sm hidden">
+                Please enter valid name & phone number
+            </p>
+        </div>
 
         <button onclick="placeOrder()"
-                class="w-full mt-4 bg-emerald-600 text-white py-3
-                       rounded-xl font-bold">
+                class="w-full mt-5 bg-emerald-600 hover:bg-emerald-700
+                       text-white py-3 rounded-xl font-bold">
             PLACE ORDER
         </button>
     </div>
 </div>
-<!-- ORDER SUCCESS -->
+
+<!-- SUCCESS MODAL -->
 <div id="success-modal"
      class="fixed inset-0 bg-black/40 hidden z-50">
 
-    <div class="absolute bottom-0 inset-x-0 bg-white rounded-t-3xl p-6
-                text-center">
+    <div class="absolute bottom-0 inset-x-0 bg-white
+                rounded-t-3xl p-6 text-center">
 
         <div class="text-emerald-600 text-5xl mb-3">✔</div>
-
         <h3 class="font-black text-xl">Order Placed!</h3>
-
-        <p class="text-gray-500 mt-1">
+        <p class="text-gray-500 mt-2 text-sm">
             Your food is being prepared 🍽️
         </p>
 
         <button onclick="closeSuccess()"
-                class="mt-5 w-full bg-emerald-600 text-white py-3
-                       rounded-xl font-bold">
+                class="mt-5 w-full bg-emerald-600
+                       text-white py-3 rounded-xl font-bold">
             OK
         </button>
     </div>
 </div>
 
 <script>
-/* ================== DATA ================== */
 const params = new URLSearchParams(window.location.search);
 const tableNo = params.get("table") || "NA";
 document.getElementById("display-table").innerText = "Table: " + tableNo;
@@ -164,54 +161,42 @@ const menuData = {{ menu | tojson | safe }};
 let cart = {};
 let selectedCategory = "All";
 
-/* ================== RENDER MENU ================== */
+/* MENU RENDER */
 function renderMenu(items) {
     const menuEl = document.getElementById("customer-menu");
     menuEl.innerHTML = "";
 
-    if (items.length === 0) {
-        menuEl.innerHTML = `
-            <p class="text-center text-gray-400 mt-10">
-                No dishes found 🍽️
-            </p>`;
-        return;
-    }
-
     items.forEach(item => {
         menuEl.innerHTML += `
-            <div class="bg-white p-3 rounded-2xl shadow-sm flex gap-4 border">
-                <img
-                    src="${
-                        item.image
-                        ? (item.image.startsWith('http') ? item.image : '/' + item.image)
-                        : '/static/no-image.png'
-                    }"
-                    class="w-24 h-24 rounded-xl object-cover">
-
+            <div class="bg-white p-4 rounded-2xl shadow-sm flex gap-4 border">
+                <img src="${item.image || '/static/no-image.png'}"
+                     class="w-24 h-24 rounded-xl object-cover">
 
                 <div class="flex-1 flex flex-col justify-between">
                     <div>
-                        <h3 class="font-bold text-gray-800">${item.name}</h3>
-                        <p class="text-[10px] text-gray-400 uppercase">
+                        <h3 class="font-semibold text-gray-800">
+                            ${item.name}
+                        </h3>
+                        <p class="text-xs text-gray-400 uppercase">
                             ${item.category}
                         </p>
                     </div>
 
-                    <div class="flex justify-between items-center mt-2">
-                        <span class="font-black text-emerald-600">
+                    <div class="flex justify-between items-center mt-3">
+                        <span class="font-bold text-emerald-600">
                             ₹${item.price}
                         </span>
 
-                        <div class="flex items-center gap-3 bg-gray-50 rounded-lg p-1">
+                        <div class="flex items-center gap-3 bg-gray-50 rounded-lg px-2 py-1">
                             <button onclick="updateCart(${item.id}, -1)"
-                                    class="w-7 h-7 bg-white shadow-sm rounded-md font-bold">−</button>
+                                    class="w-8 h-8 bg-white shadow rounded font-bold">−</button>
 
-                            <span id="qty-${item.id}"
-                                  class="text-sm font-bold">${cart[item.id] || 0}</span>
+                            <span class="font-bold">
+                                ${cart[item.id] || 0}
+                            </span>
 
                             <button onclick="updateCart(${item.id}, 1)"
-                                    class="w-7 h-7 bg-emerald-600 text-white
-                                           shadow-md rounded-md font-bold">+</button>
+                                    class="w-8 h-8 bg-emerald-600 text-white rounded font-bold">+</button>
                         </div>
                     </div>
                 </div>
@@ -220,65 +205,11 @@ function renderMenu(items) {
     });
 }
 
-/* ================== SEARCH + FILTER ================== */
-function applyFilters() {
-    const query = document.getElementById("search-input").value.toLowerCase();
-
-    const filtered = menuData.filter(item => {
-        const matchName = item.name.toLowerCase().includes(query);
-        const matchCategory =
-            selectedCategory === "All" || item.category === selectedCategory;
-
-        return matchName && matchCategory;
-    });
-
-    renderMenu(filtered);
-}
-
-/* ================== CATEGORY BUTTONS ================== */
-function renderCategories() {
-    const container = document.getElementById("category-filters");
-    const categories = ["All", ...new Set(menuData.map(i => i.category))];
-
-    categories.forEach(cat => {
-        const btn = document.createElement("button");
-        btn.innerText = cat;
-        btn.className = `
-            px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap
-            ${cat === "All"
-                ? "bg-emerald-600 text-white"
-                : "bg-white border"}
-        `;
-
-        btn.onclick = () => {
-    selectedCategory = cat;
-
-    // reset all buttons
-    [...container.children].forEach(b => {
-        b.classList.remove("bg-emerald-600", "text-white");
-        b.classList.add("bg-white", "border", "text-gray-700");
-    });
-
-    // activate clicked button
-    btn.classList.remove("bg-white", "border", "text-gray-700");
-    btn.classList.add("bg-emerald-600", "text-white");
-
-    applyFilters();
-};
-
-        container.appendChild(btn);
-    });
-}
-
-/* ================== CART ================== */
+/* CART LOGIC */
 function updateCart(id, change) {
     cart[id] = (cart[id] || 0) + change;
-
-    if (cart[id] <= 0) {
-        delete cart[id];
-    }
-
-    applyFilters();
+    if (cart[id] <= 0) delete cart[id];
+    renderMenu(menuData);
     calculateTotal();
     renderCartModal();
 }
@@ -295,13 +226,54 @@ function calculateTotal() {
     });
 
     document.getElementById("cart-count").innerText = count;
+    document.getElementById("checkout-count").innerText = count;
     document.getElementById("total-price").innerText = "₹" + total;
 
     document.getElementById("checkout-bar")
         .classList.toggle("hidden", total === 0);
 }
 
-/* ================== PLACE ORDER ================== */
+function renderCartModal() {
+    const container = document.getElementById("cart-items");
+    container.innerHTML = "";
+    let total = 0;
+
+    menuData.forEach(item => {
+        const qty = cart[item.id];
+        if (!qty) return;
+
+        total += item.price * qty;
+
+        container.innerHTML += `
+            <div class="flex justify-between items-center">
+                <div>
+                    <p class="font-semibold">${item.name}</p>
+                    <p class="text-xs text-gray-400">₹${item.price}</p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button onclick="updateCart(${item.id}, -1)"
+                        class="w-8 h-8 bg-gray-100 rounded font-bold">−</button>
+                    <span class="font-bold">${qty}</span>
+                    <button onclick="updateCart(${item.id}, 1)"
+                        class="w-8 h-8 bg-emerald-600 text-white rounded font-bold">+</button>
+                </div>
+            </div>
+        `;
+    });
+
+    document.getElementById("cart-modal-total").innerText = "₹" + total;
+}
+
+function openCart() {
+    renderCartModal();
+    document.getElementById("cart-modal").classList.remove("hidden");
+}
+
+function closeCart() {
+    document.getElementById("cart-modal").classList.add("hidden");
+}
+
 function placeOrder() {
     const items = menuData
         .filter(i => cart[i.id])
@@ -312,18 +284,15 @@ function placeOrder() {
             qty: cart[i.id]
         }));
 
-    if (items.length === 0) return;
+    if (!items.length) return;
 
     const customerName = document.getElementById("customer-name").value.trim();
     const phone = document.getElementById("customer-phone").value.trim();
     const errorEl = document.getElementById("form-error");
 
-    // ✅ validation
     if (!customerName || !/^[0-9]{10}$/.test(phone)) {
         errorEl.classList.remove("hidden");
         return;
-    } else {
-        errorEl.classList.add("hidden");
     }
 
     fetch("/order", {
@@ -339,79 +308,26 @@ function placeOrder() {
     })
     .then(res => res.json())
     .then(data => {
-        if (!data.success) {
-            alert("Something went wrong. Please try again.");
-            return;
-        }
-
+        if (!data.success) return alert("Error placing order.");
         cart = {};
         calculateTotal();
         closeCart();
         showSuccess();
-    })
-    .catch(() => {
-        alert("Network error. Please try again.");
     });
 }
 
-/* CART */
-function openCart() {
-    renderCartModal();
-    document.getElementById("cart-modal").classList.remove("hidden");
-}
-
-function closeCart() {
-    document.getElementById("cart-modal").classList.add("hidden");
-}
-
-function renderCartModal() {
-    const container = document.getElementById("cart-items");
-    container.innerHTML = "";
-
-    let total = 0;
-
-    menuData.forEach(item => {
-        const qty = cart[item.id];
-        if (!qty) return;
-
-        total += item.price * qty;
-
-        container.innerHTML += `
-            <div class="flex justify-between items-center">
-                <div>
-                    <p class="font-bold">${item.name}</p>
-                    <p class="text-sm text-gray-400">₹${item.price}</p>
-                </div>
-
-                <div class="flex items-center gap-2">
-                    <button onclick="updateCart(${item.id}, -1)"
-                            class="w-7 h-7 bg-gray-100 rounded-md font-bold">−</button>
-                    <span class="font-bold">${qty}</span>
-                    <button onclick="updateCart(${item.id}, 1)"
-                            class="w-7 h-7 bg-emerald-600 text-white rounded-md font-bold">+</button>
-                </div>
-            </div>
-        `;
-    });
-
-    document.getElementById("cart-modal-total").innerText = "₹" + total;
-}
-
-/*Success print*/
 function showSuccess() {
     document.getElementById("success-modal").classList.remove("hidden");
 }
 
 function closeSuccess() {
     document.getElementById("success-modal").classList.add("hidden");
-    location.reload(); // optional: refresh to reset menu state
+    location.reload();
 }
 
-
-/* ================== INIT ================== */
-renderCategories();
+/* INIT */
 renderMenu(menuData);
-document.getElementById("search-input").addEventListener("input", applyFilters);
+calculateTotal();
 </script>
 
 </body>
