@@ -182,7 +182,7 @@
 <script>
 function toggleRestaurant(id, el) {
 
-    fetch(`/platform/restaurants/${id}/toggle`, {
+    fetch(`/api/platform/restaurants/${id}/toggle`, {
         method: "POST"
     })
     .then(res => res.json())

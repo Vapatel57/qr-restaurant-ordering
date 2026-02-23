@@ -638,6 +638,13 @@ def platform_restaurant_details(restaurant_id):
 def toggle_restaurant_status(restaurant_id):
 
     try:
+        restaurant = fetchone(sql("""
+            SELECT id FROM restaurants WHERE id=?
+        """), (restaurant_id,))
+
+        if not restaurant:
+            return jsonify({"error": "Restaurant not found"}), 404
+
         execute(sql("""
             UPDATE restaurants
             SET is_active = NOT is_active
@@ -649,7 +656,7 @@ def toggle_restaurant_status(restaurant_id):
         return jsonify({"success": True})
 
     except Exception as e:
-        print("ERROR:", e)
+        print("TOGGLE ERROR:", e)
         return jsonify({"error": str(e)}), 500
 # --------------------------------------------------
 # CUSTOMER
